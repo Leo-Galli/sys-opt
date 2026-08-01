@@ -73,12 +73,13 @@ def _choose_language(console, t, title_key="lang_prompt"):
 
 
 def _main_menu(console, t):
-    """Arrow-key main menu; returns 0-5 or None (exit / cancel)."""
+    """Arrow-key main menu; returns 0-6 or None (exit / cancel)."""
     items = [
         "🔍 %s" % t("menu_inspect"),
         "🚀 %s" % t("menu_optimize"),
         "⚡ %s" % t("menu_suite"),
         "📊 %s" % t("menu_benchmark"),
+        "💡 %s" % t("menu_suggest"),
         "🌐 %s" % t("menu_language"),
         "🚪 %s" % t("menu_exit"),
     ]
@@ -136,7 +137,7 @@ def _interactive(console, initial_language, first_run=False):
     while True:
         console.print()
         index = _main_menu(console, t)
-        if index is None or index == 5:
+        if index is None or index == 6:
             console.print()
             console.print("[bold green]%s[/]" % t("goodbye"))
             return 0
@@ -155,6 +156,9 @@ def _interactive(console, initial_language, first_run=False):
             benchmark.run(console, t)
             _pause(console, t)
         elif index == 4:
+            optimizer.suggest(console, t, profile=_choose_profile(console, t))
+            _pause(console, t)
+        elif index == 5:
             picked = _choose_language(console, t)
             if picked:
                 language = picked
@@ -173,6 +177,12 @@ def main(argv=None):
     )
     parser.add_argument("--inspect", action="store_true", help="Inspect hardware specs and exit.")
     parser.add_argument("--optimize", action="store_true", help="Run system optimization and exit.")
+    parser.add_argument(
+        "--suggest", action="store_true",
+        help="Inspect the system and propose the most impactful optimizations "
+        "(ranked by estimated FPS/performance effect); applies only after your confirmation. "
+        "Combine with --optimize.",
+    )
     parser.add_argument("--suite", action="store_true", help="Inspect then optimize, then exit.")
     parser.add_argument("--benchmark", action="store_true", help="Run a light CPU/RAM/disk benchmark and exit.")
     parser.add_argument(
@@ -223,6 +233,8 @@ def main(argv=None):
     if args.inspect:
         inspector.run(console, t, as_json=args.json, rtl=rtl)
         return 0
+    if args.suggest:
+        return optimizer.suggest(console, t, dry_run=args.dry_run, force=args.force, profile=args.profile)
     if args.optimize:
         return optimizer.run(console, t, dry_run=args.dry_run, force=args.force, profile=args.profile)
     if args.suite:

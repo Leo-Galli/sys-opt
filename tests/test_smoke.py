@@ -87,6 +87,15 @@ class TestCliSmoke(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("Gaming", output)
 
+    def test_optimize_suggest_dry_run(self):
+        code, output = run_cli(
+            ["--optimize", "--suggest", "--dry-run", "--profile", "gaming", "--language", "en"]
+        )
+        self.assertEqual(code, 0)
+        self.assertIn("Optimization Suggestions", output)
+        self.assertIn("Impact", output)
+        self.assertIn("Suggestion mode", output)
+
     def test_benchmark_renders_table(self):
         code, output = run_cli(["--benchmark", "--language", "en"])
         self.assertEqual(code, 0)

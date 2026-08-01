@@ -249,8 +249,9 @@ On the **very first run** you choose your language (↑/↓ + Enter) — it is t
 │     2. 🚀 Run System Optimization          │
 │     3. ⚡ Full Suite                       │
 │     4. 📊 Run Performance Benchmark        │
-│     5. 🌐 Change Language                  │
-│     6. 🚪 Exit                             │
+│     5. 💡 Suggest Optimizations            │
+│     6. 🌐 Change Language                  │
+│     7. 🚪 Exit                             │
 │                                            │
 │   ↑/↓ move · Enter select · Esc back       │
 └────────────────────────────────────────────┘
@@ -268,6 +269,8 @@ Arrow keys move the **▸** cursor, **Enter** selects, **Esc** cancels, and **1-
 | `python -m sys_opt --optimize --dry-run` | Preview every step, execute nothing |
 | `python -m sys_opt --optimize --force` | Skip the elevation confirmation prompt |
 | `python -m sys_opt --optimize --profile gaming` | Run a specific profile (see below) |
+| `python -m sys_opt --optimize --suggest` | **Inspect the system and propose the most impactful optimizations** (ranked by estimated FPS/performance effect) — applies only after your confirmation |
+| `python -m sys_opt --optimize --suggest --dry-run` | Show the ranked suggestions, change nothing |
 | `python -m sys_opt --suite` | Inspect **then** optimize |
 | `python -m sys_opt --benchmark` | Run a light CPU / RAM / disk benchmark with a comparative table |
 | `python -m sys_opt --benchmark --compare` | Benchmark, save the result in `~/.sys-opt` and show the **% change vs the previous baseline** |
@@ -293,6 +296,33 @@ python -m sys_opt --optimize --profile gaming
 python -m sys_opt --suite --profile studio
 python -m sys_opt --optimize --profile ai --dry-run
 ```
+
+### 💡 Suggest mode (`--optimize --suggest`)
+
+Instead of blindly running every step, **suggest** first *inspects* your system and proposes only the optimizations that would actually help — ranked by **estimated FPS/performance impact** (★ low → ★★★★★ high) for the selected profile. It then waits for your confirmation before touching anything:
+
+```bash
+python -m sys_opt --optimize --suggest --profile gaming
+```
+
+```
+┌─ Optimization Suggestions · Gaming ─────────────────┐
+│ #  Optimization                  Impact  Status  Why it helps
+│ 1  GPU scheduling (HAGS)          ★★★★★   Ready   Offloads GPU work...
+│ 2  Game DVR recording off         ★★★★★   Ready   Stops recording overhead...
+│ 3  High Performance power plan    ★★★★★   Ready   Prevents CPU throttling...
+│    Temp files                     ★★      Applied Already clean
+│    DNS cache                      ★        Ready  Speeds up name resolution
+└──────────────────────────────────────────────────────┘
+Apply which optimizations? (all / none / numbers like 1,3):
+```
+
+How it works:
+- **Detection is strictly read-only** — it runs `powercfg` / `reg query` / `sc qc` / file counts and *never* modifies anything while suggesting.
+- Each step is labelled **Ready** (would improve this system), **Already applied** (nothing to do), **Needs elevation** (only useful as admin) or **Not applicable** (missing service / directory / package manager).
+- Confirm with `all`, `none`, or a subset like `1,3` — **only the steps you confirm are executed**, each with the normal safety net (skipped if elevation is missing, zero-crash on errors).
+- `--dry-run` shows the ranked table and exits without asking anything — perfect for scripting and CI.
+- The impact stars are **profile-aware**: FPS-critical steps (GPU scheduling, Game DVR, power plan) score ★★★★★ under `gaming`, while the `clean` profile weights disk/cache cleanup higher.
 
 ### 📊 Performance benchmark
 
@@ -413,7 +443,7 @@ sys-opt/
 python -m unittest discover -s tests -v
 ```
 
-The suite (51 tests) asserts: identical key sets across all 10 languages, English fallback, formatting helpers, safe subprocess handling, live inspection on the current host, dry-run optimizer safety, profile-based step filtering, benchmark measurements with JSON output, a regression guard that JSON stays machine-parseable even with hostile values (embedded newlines / lines beyond 80 columns), and **function-level smoke tests** (`tests/test_smoke.py`) that run the real CLI entry points (`--inspect`, `--inspect --json`, `--optimize --dry-run`, `--optimize --dry-run --profile`, `--benchmark`, `--benchmark --json`, `--list-languages`, `--version`) end-to-end with captured output — executed on every OS of the CI matrix as the safety net for the whole CLI surface.
+The suite (67 tests) asserts: identical key sets across all 10 languages, English fallback, formatting helpers, safe subprocess handling, live inspection on the current host, dry-run optimizer safety, profile-based step filtering, benchmark measurements with JSON output, a regression guard that JSON stays machine-parseable even with hostile values (embedded newlines / lines beyond 80 columns), and **function-level smoke tests** (`tests/test_smoke.py`) that run the real CLI entry points (`--inspect`, `--inspect --json`, `--optimize --dry-run`, `--optimize --dry-run --profile`, `--benchmark`, `--benchmark --json`, `--list-languages`, `--version`) end-to-end with captured output — executed on every OS of the CI matrix as the safety net for the whole CLI surface.
 
 **CI (GitHub Actions):** every push / pull request runs `actionlint` (workflow syntax) + `flake8` lint plus the full test suite on a **complete OS × Python matrix** — Ubuntu 22.04/24.04 (x86_64) & 24.04 (arm64), macOS 15 (Intel) & 14 (Apple Silicon), Windows Server 2022 & 2025, across Python **3.8 → 3.14** — plus an independent **packaging job per OS** (Linux, macOS, Windows) that builds the sdist/wheel, validates with `twine check` and smoke-tests a clean install, so a packaging failure on one OS never hides the others — see [.github/workflows/ci.yml](.github/workflows/ci.yml). **Dependabot** ([.github/dependabot.yml](.github/dependabot.yml)) opens automatic weekly PRs to keep the pinned GitHub Actions tags and the Python dependencies (`rich`, `psutil`) up to date — every PR is validated by this same CI matrix before merge, and [dependabot-automerge.yml](.github/workflows/dependabot-automerge.yml) merges them automatically once the matrix is green (minor & patch updates; major updates wait for a human review).
 
