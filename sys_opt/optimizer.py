@@ -120,6 +120,37 @@ def _step_win_dns(t, elevated, dry_run):
     return ("ok" if rc == 0 else "failed"), t("na")
 
 
+def _step_win_gpu_sched(t, elevated, dry_run):
+    """Enable hardware-accelerated GPU scheduling (HAGS) - less CPU overhead in games."""
+    command = [
+        "reg", "add", r"HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers",
+        "/v", "HwSchMode", "/t", "REG_DWORD", "/d", "2", "/f",
+    ]
+    if dry_run:
+        return "ok", " ".join(command)
+    if not elevated:
+        return "skipped_no_elev", t("na")
+    rc, _out, _err = run_cmd(command, timeout=20)
+    return ("ok" if rc == 0 else "failed"), t("na")
+
+
+def _step_win_game_dvr(t, elevated, dry_run):
+    """Disable Game DVR / Game Bar background recording (removes capture overhead)."""
+    commands = [
+        ["reg", "add", r"HKCU\System\GameConfigStore", "/v", "GameDVR_Enabled", "/t", "REG_DWORD", "/d", "0", "/f"],
+        ["reg", "add", r"HKCU\System\GameConfigStore", "/v", "GameDVR_FSEBehaviorMode", "/t", "REG_DWORD", "/d", "2", "/f"],
+        ["reg", "add", r"HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR", "/v", "AppCaptureEnabled", "/t", "REG_DWORD", "/d", "0", "/f"],
+    ]
+    if dry_run:
+        return "ok", "; ".join(" ".join(c) for c in commands)
+    success = 0
+    for command in commands:
+        rc, _out, _err = run_cmd(command, timeout=20)
+        if rc == 0:
+            success += 1
+    return ("ok" if success else "failed"), "%d/%d" % (success, len(commands))
+
+
 def _step_win_update_cache(t, elevated, dry_run):
     cache_dir = os.path.join(
         os.environ.get("SystemRoot", r"C:\Windows"), "SoftwareDistribution", "Download"
@@ -235,6 +266,8 @@ def build_steps(t, elevated, dry_run):
             (t("step_temp"), _step_win_temp),
             (t("step_service"), _step_win_services),
             (t("step_power"), _step_win_power),
+            (t("step_gpu_sched"), _step_win_gpu_sched),
+            (t("step_game_dvr"), _step_win_game_dvr),
             (t("step_dns"), _step_win_dns),
             (t("step_update_cache"), _step_win_update_cache),
         ]

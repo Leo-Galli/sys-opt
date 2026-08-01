@@ -17,6 +17,7 @@
   - Storage: physical drives (NVMe/SSD/HDD), partition layout, size, free space %
 - **🚀 Multi-OS Optimizer** (elevation-aware):
   - **Windows 10/11:** purge `%TEMP%` & `C:\Windows\Temp`, stop/disable `SysMain`/`Superfetch`, activate High/Ultimate Performance plan, `ipconfig /flushdns`, clear Windows Update cache
+  - **🎮 FPS / gaming tweaks (Windows):** enable hardware-accelerated GPU scheduling (HAGS) and disable Game DVR / Game Bar background recording to cut capture overhead and smooth frame times
   - **macOS:** clear `~/Library/Caches` & `/Library/Caches`, flush DNS (`dscacheutil`, `mDNSResponder`), `purge` inactive memory
   - **Linux:** clean `/tmp`, release kernel memory caches (`drop_caches`), auto-detect package manager (`apt clean`, `dnf clean all`, `pacman -Sc`, `zypper clean`, `apk cache clean`)
 - **🌐 i18n engine** with 10 languages, zero missing keys, automatic locale detection, on-the-fly switching (RTL-aware for Arabic)
