@@ -32,6 +32,46 @@ METRICS = (
     ("elapsed_seconds", "Elapsed", "s", 1),
 )
 
+#: Reference thresholds (slow, good, great) per metric, used only to build
+#: the per-OS verdict in the report. Matches sys_opt/benchmark.py heuristics.
+_REFERENCE = {
+    "cpu_mops": (2.0, 4.0, 8.0),
+    "ram_mbps": (4000.0, 8000.0, 15000.0),
+    "disk_write_mbps": (150.0, 400.0, 900.0),
+    "disk_read_mbps": (200.0, 500.0, 1200.0),
+}
+
+_VERDICTS = {
+    0: ("🔴 Below average", "consider running the optimizer"),
+    1: ("🟡 Average", "an optimization run may help"),
+    2: ("🟢 Good", "running well"),
+    3: ("🟢 Excellent", "performing very well"),
+}
+
+
+def _verdict(record):
+    """Return (label, note) describing the overall machine health.
+
+    The score is the lowest tier among the measured components (a machine is
+    only as fast as its weakest part); unmeasured metrics (<= 0) are skipped.
+    """
+    scores = []
+    for key, (slow, good, great) in _REFERENCE.items():
+        value = record.get(key, 0.0)
+        if not isinstance(value, (int, float)) or value <= 0:
+            continue
+        if value >= great:
+            scores.append(3)
+        elif value >= good:
+            scores.append(2)
+        elif value >= slow:
+            scores.append(1)
+        else:
+            scores.append(0)
+    if not scores:
+        return _VERDICTS[1]
+    return _VERDICTS[min(scores)]
+
 
 def _utc_now():
     return datetime.now(timezone.utc)
@@ -75,8 +115,41 @@ def _write_report(all_runs):
             history = all_runs[os_name]
             latest = history[-1] if history else {}
             row.append(_fmt(latest.get(key), unit, digits))
-        lines.append(" ".join(row) + " |")
-    lines.extend(["", "## Recent history", ""])
+        # Real markdown cells: join with " | " (a single-space join would
+        # render every metric as one big cell, breaking the table layout).
+        lines.append(" | ".join(row) + " |")
+    verdict_row = ["| **Overall verdict**"]
+    for os_name in ordered:
+        history = all_runs[os_name]
+        latest = history[-1] if history else {}
+        label, _note = _verdict(latest)
+        verdict_row.append(label)
+    lines.append(" | ".join(verdict_row) + " |")
+    lines.extend(
+        [
+            "",
+            "## How to read these numbers",
+            "",
+            "| Metric | Meaning | Higher is |",
+            "|---|---|---|",
+            "| **CPU** | Floating-point operations per second (light compute loop) | better |",
+            "| **RAM** | Memory bandwidth measured with repeated buffer copies | better |",
+            "| **Disk write / read** | Sequential temp-file write/read speed (fsync included) | better |",
+            "| **Elapsed** | Total time the whole benchmark took | lower is better |",
+            "",
+            "The **overall verdict** is the *lowest* tier among the measured",
+            "components: a machine is only as fast as its weakest part. Expect",
+            "realistic numbers on a GitHub-hosted runner to land in the",
+            "**Average** band — that is the baseline.",
+            "",
+            "Run `python -m sys_opt --benchmark` on your own machine **before**",
+            "optimizing to get a baseline, then again **after** to measure the",
+            "improvement.",
+            "",
+            "## Recent history",
+            "",
+        ]
+    )
     for os_name in ordered:
         lines.extend(["### %s" % os_name, ""])
         history = all_runs[os_name]

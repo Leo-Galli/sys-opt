@@ -88,9 +88,11 @@
 
 **🎯 Optimization profiles** — pick the kind of tune-up you want: Full, Gaming, AI/ML, Studio/Work, or Cleanup-only.
 
-**📊 Performance benchmark** — lightweight CPU / RAM / disk stress tests (psutil-backed) with a comparative trend table, perfect for measuring the effect of your optimization.
+**📊 Performance benchmark** — lightweight CPU / RAM / disk stress tests (psutil-backed) with a comparative trend table, a plain-language **explanation of every number** and an **overall health verdict** (🟢 Excellent → 🔴 Below average), perfect for measuring the effect of your optimization.
 
-**🌐 i18n engine** — 10 complete languages, **zero missing keys** (enforced by tests), automatic locale detection, on-the-fly switching, RTL-aware layout for Arabic.
+**🌐 i18n engine** — 10 complete languages, **zero missing keys** (enforced by tests), automatic locale detection, on-the-fly switching, RTL-aware layout for Arabic. The language you pick on **first launch is remembered forever** on that machine (stored in `~/.sys-opt/config.json`) — change it any time from the menu.
+
+**⌨️ Arrow-key menus** — navigate the menu, the language picker and the profile chooser with **↑/↓ + Enter** (Esc cancels, digits jump straight to an item). On non-TTY terminals (pipes, CI) it falls back to a numbered prompt, so scripts never hang.
 
 **🛡️ Zero-crash policy** — every hardware query and OS command is wrapped in `try/except`; unreadable attributes degrade gracefully to `N/A` / `Access Denied` instead of crashing.
 
@@ -113,7 +115,7 @@
 | 9 | `ja` | 🇯🇵 日本語 | LTR |
 | 10 | `ar` | 🇸🇦 العربية | RTL |
 
-**Detection flow:** on startup the host locale is detected automatically and used as the default → you can switch at any time from the menu. Unknown locales and any missing key fall back to English.
+**Detection flow:** on startup the host locale is detected automatically and used as the default → you can switch at any time from the menu. **The first time you run `sys-opt` interactively, you choose your language and it is remembered forever** in `~/.sys-opt/config.json` — every later launch starts in that language (an explicit `--language <code>` still wins). Unknown locales and any missing key fall back to English.
 
 ---
 
@@ -231,19 +233,25 @@ python3 -m sys_opt
 python -m sys_opt        # or just: sys-opt  (after pip install)
 ```
 
+On the **very first run** you choose your language (↑/↓ + Enter) — it is then remembered forever on that machine. The main menu is also arrow-key driven:
+
 ```
  ███████╗██╗   ██╗███████╗      ██████╗ ██████╗ ████████╗
  ██╔════╝╚██╗ ██╔╝██╔════╝     ██╔═══██╗██╔═══██╗╚══██╔══╝
  ███████╗ ╚████╔╝ ███████╗     ██║   ██║██║   ██║   ██║
  ╚════██║  ╚██╔╝  ╚════██║     ██║   ██║██║   ██║   ██║
  ███████║   ██║   ███████║     ╚██████╔╝╚██████╔╝   ██║
- ╚══════╝   ╚═╝   ╚══════╝      ╚═════╝  ╚═════╝    ╚═╝ [1] 🔍 Inspect System Specs
- [2] 🚀 Run System Optimization
- [3] ⚡ Full Suite
- [4] 📊 Run Performance Benchmark
- [5] 🌐 Change Language
- [0] 🚪 Exit
+ ╚══════╝   ╚═╝   ╚══════╝      ╚═════╝  ╚═════╝    ╚═╝ ▶ 1. 🔍 Inspect System Specs
+    2. 🚀 Run System Optimization
+    3. ⚡ Full Suite
+    4. 📊 Run Performance Benchmark
+    5. 🌐 Change Language
+    6. 🚪 Exit
+
+   Use ↑/↓ to move, Enter to select, Esc to go back
 ```
+
+Arrow keys move the **▶** cursor, **Enter** selects, **Esc** cancels, and **1-9** jump straight to an item. The same controls power the language picker and the optimization-profile chooser.
 
 ### Non-interactive flags
 
@@ -296,7 +304,13 @@ python -m sys_opt --benchmark --json
 | Disk (write) | Writes a temp file with `fsync` → write speed (`MB/s`) |
 | Disk (read) | Reads the temp file back → read speed (`MB/s`) |
 
-Each row also shows a relative **trend bar** comparing it against the fastest measured component. All tests are zero-crash and clean up their temp files automatically.
+Each row also shows a relative **trend bar** comparing it against the fastest measured component. After the table, the tool **explains what every number means** (CPU ops/s, RAM bandwidth, disk speeds) and prints an **overall health verdict** based on your weakest component:
+
+- 🟢 **Excellent** / **Good** — the system is running well
+- 🟡 **Average** — an optimization run may help
+- 🔴 **Below average** — consider running the optimizer
+
+The verdict lives in the table output only; `--json` stays machine-pure. All tests are zero-crash and clean up their temp files automatically.
 
 ### 🔐 Elevation
 
@@ -418,7 +432,7 @@ The suite (28 tests) asserts: identical key sets across all 10 languages, Englis
 
 **Which languages are supported?** 10: Italian, English, Spanish, French, German, Portuguese, Russian, Chinese (Simplified), Japanese, Arabic (RTL).
 
-**How do I change the language?** Menu → `[4] 🌐 Change Language`, or pass `--language <code>`.
+**How do I change the language?** Menu → `🌐 Change Language` (saved to `~/.sys-opt/config.json`, remembered forever), or pass `--language <code>` once.
 
 **How do I choose what to optimize?** The menu asks for an **optimization profile** (Gaming, AI, Studio, Cleanup or Full) whenever you pick *Run System Optimization* or *Full Suite*; from the CLI use `--profile <name>`.
 

@@ -11,6 +11,7 @@ from .i18n.languages import (
     build_translator,
     detect_system_language,
 )
+from .utils import arrow_menu, load_config, save_config
 from . import benchmark, inspector, optimizer
 
 
@@ -59,48 +60,29 @@ def _print_languages(console):
     console.print(table)
 
 
-def _choose_language(console, t):
-    _print_languages(console)
-    detected = detect_system_language()
-    default_native = LANGUAGES[detected]["native"]
-    from rich.prompt import Prompt
-
-    prompt_text = "%s [1-%d] (%s: %s):" % (
-        t("lang_prompt"),
-        len(LANGUAGE_ORDER),
-        t("lang_auto"),
-        default_native,
-    )
-    try:
-        choice = Prompt.ask(prompt_text, default="0", show_default=False)
-        choice_int = int(choice)
-    except Exception:
-        choice_int = 0
-    if 1 <= choice_int <= len(LANGUAGE_ORDER):
-        return LANGUAGE_ORDER[choice_int - 1]
-    return detected
+def _choose_language(console, t, title_key="lang_prompt"):
+    """Arrow-key language picker; returns a language code or None."""
+    items = []
+    for code in LANGUAGE_ORDER:
+        meta = LANGUAGES[code]
+        items.append("%s %s (%s)" % (meta["flag"], meta["native"], code))
+    index = arrow_menu(console, t(title_key), items, hint=t("menu_arrow_hint"))
+    if index is None:
+        return None
+    return LANGUAGE_ORDER[index]
 
 
 def _main_menu(console, t):
-    from rich.panel import Panel
-    from rich.table import Table
-
-    table = Table(box=None, show_header=False, padding=(0, 2))
-    table.add_column()
-    table.add_row("[bold cyan][1][/] 🔍 %s" % t("menu_inspect"))
-    table.add_row("[bold cyan][2][/] 🚀 %s" % t("menu_optimize"))
-    table.add_row("[bold cyan][3][/] ⚡ %s" % t("menu_suite"))
-    table.add_row("[bold cyan][4][/] 📊 %s" % t("menu_benchmark"))
-    table.add_row("[bold cyan][5][/] 🌐 %s" % t("menu_language"))
-    table.add_row("[bold cyan][0][/] 🚪 %s" % t("menu_exit"))
-    console.print(
-        Panel(
-            table,
-            title="[bold]%s[/]" % t("app_title"),
-            subtitle=t("tagline"),
-            border_style="cyan",
-        )
-    )
+    """Arrow-key main menu; returns 0-5 or None (exit / cancel)."""
+    items = [
+        "🔍 %s" % t("menu_inspect"),
+        "🚀 %s" % t("menu_optimize"),
+        "⚡ %s" % t("menu_suite"),
+        "📊 %s" % t("menu_benchmark"),
+        "🌐 %s" % t("menu_language"),
+        "🚪 %s" % t("menu_exit"),
+    ]
+    return arrow_menu(console, t("menu_title"), items, hint=t("menu_arrow_hint"))
 
 
 def _print_banner(console):
@@ -112,25 +94,12 @@ def _print_banner(console):
 
 
 def _choose_profile(console, t):
-    from rich.panel import Panel
-    from rich.prompt import Prompt
-    from rich.table import Table
-
-    table = Table(box=None, show_header=False, padding=(0, 2))
-    table.add_column()
-    for index, code in enumerate(optimizer.PROFILE_ORDER, start=1):
-        table.add_row(
-            "[bold cyan][%d][/] %s" % (index, t(optimizer.PROFILE_LABEL_KEYS[code]))
-        )
-    console.print(Panel(table, title="[bold]%s[/]" % t("profile_prompt"), border_style="cyan"))
-    try:
-        choice = Prompt.ask(t("profile_prompt"), default="1", show_default=False)
-        choice_int = int(choice)
-    except Exception:
-        choice_int = 1
-    if 1 <= choice_int <= len(optimizer.PROFILE_ORDER):
-        return optimizer.PROFILE_ORDER[choice_int - 1]
-    return "all"
+    """Arrow-key profile picker; falls back to 'all' on cancel."""
+    items = [t(optimizer.PROFILE_LABEL_KEYS[code]) for code in optimizer.PROFILE_ORDER]
+    index = arrow_menu(console, t("profile_prompt"), items, hint=t("menu_arrow_hint"))
+    if index is None:
+        return "all"
+    return optimizer.PROFILE_ORDER[index]
 
 
 def _pause(console, t):
@@ -140,48 +109,60 @@ def _pause(console, t):
         pass
 
 
-def _interactive(console, initial_language):
-    from rich.prompt import Prompt
+def _print_language_saved(console, t, language):
+    meta = LANGUAGES[language]
+    console.print(
+        "[bold green]✓ %s: %s %s — %s[/]"
+        % (t("lang_selected"), meta["flag"], meta["native"], t("lang_saved"))
+    )
 
+
+def _interactive(console, initial_language, first_run=False):
     language = initial_language
     t = build_translator(language)
     console.print()
     _print_banner(console)
+    if first_run:
+        console.print()
+        console.print("[bold cyan]%s[/]" % t("lang_first_run"))
+        picked = _choose_language(console, t)
+        if picked:
+            language = picked
+            t = build_translator(language)
+            save_config(language)
+            console.print()
+            _print_language_saved(console, t, language)
+            _pause(console, t)
     while True:
         console.print()
-        _main_menu(console, t)
-        try:
-            choice = Prompt.ask(
-                t("menu_prompt"), choices=["0", "1", "2", "3", "4", "5"], default="0", show_default=False
-            )
-        except Exception:
-            choice = "0"
-        if choice == "1":
+        index = _main_menu(console, t)
+        if index is None or index == 5:
+            console.print()
+            console.print("[bold green]%s[/]" % t("goodbye"))
+            return 0
+        if index == 0:
             inspector.run(console, t, rtl=LANGUAGES[language]["dir"] == "rtl")
             _pause(console, t)
-        elif choice == "2":
+        elif index == 1:
             optimizer.run(console, t, profile=_choose_profile(console, t))
             _pause(console, t)
-        elif choice == "3":
+        elif index == 2:
             profile = _choose_profile(console, t)
             inspector.run(console, t, rtl=LANGUAGES[language]["dir"] == "rtl")
             optimizer.run(console, t, profile=profile)
             _pause(console, t)
-        elif choice == "4":
+        elif index == 3:
             benchmark.run(console, t)
             _pause(console, t)
-        elif choice == "5":
-            language = _choose_language(console, t)
-            t = build_translator(language)
-            console.print(
-                "[bold green]✓ %s: %s %s[/]"
-                % (t("lang_selected"), LANGUAGES[language]["flag"], LANGUAGES[language]["native"])
-            )
+        elif index == 4:
+            picked = _choose_language(console, t)
+            if picked:
+                language = picked
+                t = build_translator(language)
+                save_config(language)
+                console.print()
+                _print_language_saved(console, t, language)
             _pause(console, t)
-        else:
-            console.print()
-            console.print("[bold green]%s[/]" % t("goodbye"))
-            return 0
 
 
 def main(argv=None):
@@ -218,10 +199,17 @@ def main(argv=None):
         )
         return 1
 
+    # Language resolution order: explicit --language > saved config > system detect.
+    saved = load_config().get("language")
     if args.language in LANGUAGES:
         language = args.language
+        from_config = False
+    elif saved in LANGUAGES:
+        language = saved
+        from_config = True
     else:
         language = detect_system_language()
+        from_config = False
     t = build_translator(language)
 
     if args.list_languages:
@@ -246,10 +234,12 @@ def main(argv=None):
         )
         return 0
 
+    label_key = "lang_current" if from_config else "lang_detected"
     console.print(
-        "[dim]%s: %s %s[/]" % (t("lang_detected"), LANGUAGES[language]["flag"], LANGUAGES[language]["native"])
+        "[dim]%s: %s %s[/]" % (t(label_key), LANGUAGES[language]["flag"], LANGUAGES[language]["native"])
     )
-    return _interactive(console, language)
+    first_run = saved not in LANGUAGES and args.language not in LANGUAGES
+    return _interactive(console, language, first_run=first_run)
 
 
 if __name__ == "__main__":

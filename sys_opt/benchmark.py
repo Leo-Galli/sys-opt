@@ -24,6 +24,24 @@ from .utils import format_bytes
 
 _BAR_WIDTH = 12
 
+#: Reference thresholds (slow, good, great) per metric — used only for the
+#: plain-table verdict, never for the JSON payload. Calibrated against real
+#: measurements: the CPU loop is a Python tight loop (a few M ops/s), RAM is
+#: memcpy bandwidth, disk is sequential temp-file I/O.
+_REFERENCE = {
+    "cpu_mops": (2.0, 4.0, 8.0),
+    "ram_mbps": (4000.0, 8000.0, 15000.0),
+    "disk_write_mbps": (150.0, 400.0, 900.0),
+    "disk_read_mbps": (200.0, 500.0, 1200.0),
+}
+
+_VERDICT_KEYS = {
+    0: "benchmark_verdict_slow",
+    1: "benchmark_verdict_ok",
+    2: "benchmark_verdict_good",
+    3: "benchmark_verdict_great",
+}
+
 
 def _cpu_benchmark(duration=1.0):
     """Light CPU compute stress; returns M ops/s (millions of ops per sec)."""
@@ -124,6 +142,33 @@ def _trend_bar(value, maximum):
     return "[green]%s[/][dim]%s[/]" % ("█" * filled, "░" * (_BAR_WIDTH - filled))
 
 
+def _verdict(results):
+    """Map results to a verdict i18n key (0=slow .. 3=great).
+
+    The overall score is the *lowest* tier among the measured components:
+    a machine is only as fast as its weakest part. Metrics that failed to
+    measure (0.0) are skipped.
+    """
+    scores = []
+    for key, thresholds in _REFERENCE.items():
+        value = results.get(key, 0.0)
+        if value <= 0:
+            continue
+        slow, good, great = thresholds
+        if value >= great:
+            score = 3
+        elif value >= good:
+            score = 2
+        elif value >= slow:
+            score = 1
+        else:
+            score = 0
+        scores.append(score)
+    if not scores:
+        return "benchmark_verdict_ok"
+    return _VERDICT_KEYS[min(scores)]
+
+
 def run(console, t, as_json=False):
     """Run the benchmark suite and print the comparative table."""
     if not as_json:
@@ -194,4 +239,13 @@ def run(console, t, as_json=False):
         _trend_bar(read_mbps, maximum),
     )
     console.print(table)
+
+    # Explanation + verdict (plain table mode only; --json stays untouched).
+    console.print()
+    console.print("[bold cyan]%s[/]" % t("benchmark_what"))
+    for key in ("benchmark_explain_cpu", "benchmark_explain_ram", "benchmark_explain_disk"):
+        console.print("  [dim]•[/] %s" % t(key))
+    console.print()
+    console.print("[bold]%s[/]" % t(_verdict(results)))
+    console.print("[dim]%s[/]" % t("benchmark_tip"))
     return 0

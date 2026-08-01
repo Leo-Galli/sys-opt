@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
 """Tests for shared utilities."""
 
+import tempfile
 import unittest
 
 from sys_opt.utils import (
+    config_path,
     format_bytes,
     format_freq,
     format_uptime,
     is_admin,
+    load_config,
     run_cmd,
+    save_config,
 )
 
 
@@ -47,6 +51,40 @@ class TestSubprocess(unittest.TestCase):
 class TestElevation(unittest.TestCase):
     def test_is_admin_returns_bool(self):
         self.assertIsInstance(is_admin(), bool)
+
+
+class TestConfigPersistence(unittest.TestCase):
+    """The user's language choice must survive across launches."""
+
+    def test_save_then_load_roundtrip(self):
+        with tempfile.TemporaryDirectory() as base:
+            self.assertTrue(save_config("ja", base=base))
+            loaded = load_config(base=base)
+            self.assertEqual(loaded.get("language"), "ja")
+            self.assertTrue(config_path(base).exists())
+
+    def test_load_config_missing_file_returns_empty(self):
+        with tempfile.TemporaryDirectory() as base:
+            self.assertEqual(load_config(base=base), {})
+
+    def test_save_config_updates_instead_of_overwriting(self):
+        with tempfile.TemporaryDirectory() as base:
+            save_config("it", base=base)
+            save_config("fr", base=base)
+            loaded = load_config(base=base)
+            self.assertEqual(loaded.get("language"), "fr")
+
+    def test_save_config_never_raises_on_bad_base(self):
+        import os
+
+        # A base that is an existing *file* cannot be mkdir'd → returns False
+        # (portable across Windows/macOS/Linux, where a rooted bogus path may
+        # actually resolve to a creatable directory on the current drive).
+        with tempfile.TemporaryDirectory() as base:
+            blocker = os.path.join(base, "blocker")
+            with open(blocker, "w", encoding="utf-8") as handle:
+                handle.write("x")
+            self.assertFalse(save_config("en", base=blocker))
 
 
 def sys_executable():
