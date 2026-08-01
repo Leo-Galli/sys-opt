@@ -636,7 +636,7 @@ git tag v1.1.0
 git push origin v1.1.0
 ```
 
-The workflow builds the sdist + wheel, validates them with `twine check`, and publishes using **trusted publishing (OIDC)** — no API token stored in the repo. To enable it, register the PyPI project **`sys-opt`** as a trusted publisher pointing at `Leo-Galli/sys-opt` (workflow `release.yml`, environment `release`). After the first release, the `PyPI` badges above light up and anyone can `pip install sys-opt`.
+The workflow **first verifies that the pushed tag matches both the version in `pyproject.toml` and the runtime `__version__` in `sys_opt/__init__.py`** (a mismatch fails the release with a clear error — bump both before tagging), then builds the sdist + wheel, validates them with `twine check`, and publishes using **trusted publishing (OIDC)** — no API token stored in the repo. To enable it, register the PyPI project **`sys-opt`** as a trusted publisher pointing at `Leo-Galli/sys-opt` (workflow `release.yml`, environment `release`). After the first release, the `PyPI` badges above light up and anyone can `pip install sys-opt`.
 
 ---
 
