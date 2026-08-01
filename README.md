@@ -274,6 +274,9 @@ Arrow keys move the **▸** cursor, **Enter** selects, **Esc** cancels, and **1-
 | `python -m sys_opt --suite` | Inspect **then** optimize |
 | `python -m sys_opt --benchmark` | Run a light CPU / RAM / disk benchmark with a comparative table |
 | `python -m sys_opt --benchmark --compare` | Benchmark, save the result in `~/.sys-opt` and show the **% change vs the previous baseline** |
+| `python -m sys_opt --benchmark --history` | Show saved runs as **ASCII trend charts per metric** (CPU/RAM/disk) — reads the file, runs nothing |
+| `python -m sys_opt --benchmark --history --history-limit 10` | Show only the last **10** runs (default: all saved) |
+| `python -m sys_opt --benchmark --history --json` | Emit the saved run history as JSON (scripting) |
 | `python -m sys_opt --benchmark --json` | Emit benchmark results as JSON (scripting) |
 | `python -m sys_opt --language it --inspect` | Force a specific language (`it`, `en`, `es`, `fr`, `de`, `pt`, `ru`, `zh`, `ja`, `ar`) |
 | `python -m sys_opt --list-languages` | List all supported languages |
@@ -386,6 +389,37 @@ Each row also shows a relative **trend bar** comparing it against the fastest me
 
 The verdict lives in the table output only; `--json` stays machine-pure. All tests are zero-crash and clean up their temp files automatically.
 
+### 📈 Benchmark history (`--benchmark --history`)
+
+Every `--benchmark --compare` run is now **appended** to `~/.sys-opt/benchmark.json` (instead of overwriting a single baseline) — so the file is a growing **history of runs** (capped at the newest 500). Run the history view to see the performance **trend over time** as ASCII bar charts, one per metric:
+
+```bash
+python -m sys_opt --benchmark --compare   # record run #1 (before optimizing)
+# ... optimize your system ...
+python -m sys_opt --benchmark --compare   # record run #2 (after)
+python -m sys_opt --benchmark --history   # see the trend
+```
+
+```
+┌─ Benchmark History ──────────────────────────────┐
+│ Last 3 runs                                      │
+│                                                  │
+│ CPU                                              │
+│   08-01 10:00  ████░░░░░░░░ ░░░░░░░░░░░  ▲       │
+│   08-02 18:30  ██████░░░░░░ ░░░░░░░░░░░  ▲       │
+│   08-03 09:15  ████████░░░░ ░░░░░░░░░░░  ·       │
+│ Memory (RAM)                                     │
+│   ...                                            │
+└──────────────────────────────────────────────────┘
+```
+
+- **Oldest run on top, newest at the bottom** — the trend reads top-to-bottom, exactly like the direction your optimizations should push it.
+- Each row is a bar scaled to that metric's **maximum within the shown window**, plus a **trend marker** vs the previous run: 🟢 `▲` up, 🔴 `▼` down, `·` flat.
+- `--history` **never runs the stress test and never writes** — it only reads `benchmark.json`, so it's instant and safe to run anytime.
+- Backward compatible: files written before this feature (a single `{timestamp, results}` object) are read as a one-run history.
+- `--history --json` emits the raw run list for scripting.
+- **Tip:** run `--benchmark --compare` regularly (before/after each optimization) and the history becomes your performance diary.
+
 ### 🔐 Elevation
 
 Optimization steps that touch system-wide settings need elevated privileges (**Administrator** on Windows, **sudo / root** on macOS & Linux). **Inspection works without them.**
@@ -476,7 +510,7 @@ sys-opt/
 python -m unittest discover -s tests -v
 ```
 
-The suite (71 tests) asserts: identical key sets across all 10 languages, English fallback, formatting helpers, safe subprocess handling, live inspection on the current host, dry-run optimizer safety, profile-based step filtering, benchmark measurements with JSON output, a regression guard that JSON stays machine-parseable even with hostile values (embedded newlines / lines beyond 80 columns), and **function-level smoke tests** (`tests/test_smoke.py`) that run the real CLI entry points (`--inspect`, `--inspect --json`, `--optimize --dry-run`, `--optimize --dry-run --profile`, `--benchmark`, `--benchmark --json`, `--list-languages`, `--version`) end-to-end with captured output — executed on every OS of the CI matrix as the safety net for the whole CLI surface.
+The suite (82 tests) asserts: identical key sets across all 10 languages, English fallback, formatting helpers, safe subprocess handling, live inspection on the current host, dry-run optimizer safety, profile-based step filtering, benchmark measurements with JSON output, a regression guard that JSON stays machine-parseable even with hostile values (embedded newlines / lines beyond 80 columns), and **function-level smoke tests** (`tests/test_smoke.py`) that run the real CLI entry points (`--inspect`, `--inspect --json`, `--optimize --dry-run`, `--optimize --dry-run --profile`, `--benchmark`, `--benchmark --json`, `--list-languages`, `--version`) end-to-end with captured output — executed on every OS of the CI matrix as the safety net for the whole CLI surface.
 
 **CI (GitHub Actions):** every push / pull request runs `actionlint` (workflow syntax) + `flake8` lint plus the full test suite on a **complete OS × Python matrix** — Ubuntu 22.04/24.04 (x86_64) & 24.04 (arm64), macOS 15 (Intel) & 14 (Apple Silicon), Windows Server 2022 & 2025, across Python **3.8 → 3.14** — plus an independent **packaging job per OS** (Linux, macOS, Windows) that builds the sdist/wheel, validates with `twine check` and smoke-tests a clean install, so a packaging failure on one OS never hides the others — see [.github/workflows/ci.yml](.github/workflows/ci.yml). **Dependabot** ([.github/dependabot.yml](.github/dependabot.yml)) opens automatic weekly PRs to keep the pinned GitHub Actions tags and the Python dependencies (`rich`, `psutil`) up to date — every PR is validated by this same CI matrix before merge, and [dependabot-automerge.yml](.github/workflows/dependabot-automerge.yml) merges them automatically once the matrix is green (minor & patch updates; major updates wait for a human review).
 

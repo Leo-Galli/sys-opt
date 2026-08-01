@@ -189,6 +189,15 @@ def main(argv=None):
         "--compare", action="store_true",
         help="With --benchmark: save the result in ~/.sys-opt and show the %% change vs the previous baseline.",
     )
+    parser.add_argument(
+        "--history", action="store_true",
+        help="With --benchmark: show saved benchmark runs as ASCII trend charts "
+        "per metric (CPU/RAM/disk) — reads ~/.sys-opt/benchmark.json, runs nothing.",
+    )
+    parser.add_argument(
+        "--history-limit", type=int, default=None, metavar="N",
+        help="With --benchmark --history: show only the last N runs (default: all).",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Show optimization steps without executing them.")
     parser.add_argument("--force", action="store_true", help="Skip the elevation confirmation prompt.")
     parser.add_argument(
@@ -241,7 +250,11 @@ def main(argv=None):
         inspector.run(console, t, as_json=args.json, rtl=rtl)
         return optimizer.run(console, t, dry_run=args.dry_run, force=args.force, profile=args.profile)
     if args.benchmark:
-        return benchmark.run(console, t, as_json=args.json, compare=args.compare)
+        return benchmark.run(
+            console, t,
+            as_json=args.json, compare=args.compare,
+            show_history=args.history, history_limit=args.history_limit,
+        )
 
     if not sys.stdin.isatty():
         _print_languages(console)

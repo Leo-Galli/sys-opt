@@ -109,6 +109,18 @@ class TestCliSmoke(unittest.TestCase):
         for key in ("cpu_mops", "ram_mbps", "disk_write_mbps", "disk_read_mbps"):
             self.assertIn(key, data)
 
+    def test_benchmark_history_dry(self):
+        """--benchmark --history reads the saved runs and runs no stress test.
+
+        On a fresh machine there is usually no history yet, so the friendly
+        empty-state message is the deterministic thing to assert; the chart
+        rendering itself is covered deterministically by unit tests with a
+        seeded history file.
+        """
+        code, output = run_cli(["--benchmark", "--history", "--language", "en"])
+        self.assertEqual(code, 0)
+        self.assertIn("Benchmark History", output)
+
     def test_unsupported_language_flag_falls_back(self):
         """An unknown --language must not crash; it detects/falls back.
 

@@ -134,7 +134,8 @@ def _context():
 
 
 def _trend_bar(value, maximum):
-    """Relative ██░░ bar compared to the fastest measured component."""
+    """Relative ██░░ bar compared to the given maximum (a component in the
+    compare table, or the run-window maximum in the history charts)."""
     if maximum <= 0 or value <= 0:
         return "[dim]%s[/]" % ("░" * _BAR_WIDTH)
     filled = int(round(value / maximum * _BAR_WIDTH))
@@ -151,25 +152,47 @@ _COMPARE_METRICS = (
 )
 
 
+#: Maximum number of runs kept in the persisted history (oldest dropped).
+_HISTORY_MAX = 500
+
+
 def _baseline_path(base=None):
-    """Path of the persisted benchmark baseline (inside ~/.sys-opt)."""
+    """Path of the persisted benchmark history (inside ~/.sys-opt)."""
     return config_dir(base) / "benchmark.json"
 
 
-def load_baseline(base=None):
-    """Load the last saved benchmark; returns {} on any failure."""
+def load_history(base=None):
+    """Load every saved benchmark run, oldest first; [] on any failure.
+
+    Backward compatible: files written before --history stored a single run
+    as a dict ``{timestamp, results}``; those are treated as a one-element
+    history. A list is the current format (newest last). Corrupt or
+    non-dict entries are dropped so the history never crashes a render.
+    """
     try:
         data = json.loads(_baseline_path(base).read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {}
     except Exception:
-        return {}
+        return []
+    if isinstance(data, dict):
+        data = [data]
+    if not isinstance(data, list):
+        return []
+    runs = [entry for entry in data if isinstance(entry, dict)]
+    return runs[-_HISTORY_MAX:]
+
+
+def load_baseline(base=None):
+    """Load the most recent saved run (for --compare); {} when none."""
+    history = load_history(base)
+    return history[-1] if history else {}
 
 
 def save_baseline(results, base=None):
-    """Persist benchmark results with a timestamp for later comparison.
+    """Append a benchmark run (timestamped) to the persisted history.
 
     Never raises (zero-crash policy): a missing/read-only config dir simply
-    means the baseline is not stored.
+    means the run is not stored. The newest run is always the last element,
+    so ``load_baseline`` keeps returning the latest measurement for --compare.
     """
     try:
         directory = config_dir(base)
@@ -178,8 +201,11 @@ def save_baseline(results, base=None):
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
             "results": results,
         }
+        history = load_history(base)
+        history.append(payload)
+        del history[:-_HISTORY_MAX]  # keep only the newest _HISTORY_MAX runs
         _baseline_path(base).write_text(
-            json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+            json.dumps(history, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
         )
         return True
     except Exception:
@@ -205,6 +231,76 @@ def _delta_cell(delta):
     sign = "+" if delta >= 0 else ""
     color = "green" if delta >= 0 else "red"
     return "[%s]%s%.1f%%[/]" % (color, sign, delta)
+
+
+def _short_ts(timestamp):
+    """'2026-08-01 14:03:22' -> '08-01 14:03'; the raw value on any oddity."""
+    try:
+        date_part, time_part = str(timestamp).split(" ")[:2]
+        return "%s %s" % (date_part[5:], time_part[:5])
+    except Exception:
+        return str(timestamp)
+
+
+def _history_trend(current, previous):
+    """Trend marker for a run vs the previous one: ▲ green, ▼ red, · flat."""
+    if previous is None or current <= 0 or previous <= 0:
+        return ""
+    if current > previous * 1.01:
+        return " [green]▲[/]"
+    if current < previous * 0.99:
+        return " [red]▼[/]"
+    return " [dim]·[/]"
+
+
+def history(console, t, limit=None, as_json=False, base=None):
+    """Render saved benchmark runs as per-metric ASCII trend charts.
+
+    Reads only ``~/.sys-opt/benchmark.json`` (never runs the stress test and
+    never writes). With ``as_json`` the raw run list is emitted as pure JSON
+    for scripting; otherwise each metric (CPU / RAM / disk write / disk read)
+    is drawn as a bar chart, oldest at the top, with ▲/▼/· showing the trend
+    from one run to the next.
+    """
+    runs = load_history(base)
+    if limit and limit > 0:
+        runs = runs[-limit:]
+    if as_json:
+        console.file.write(json.dumps(runs, indent=2) + "\n")
+        return 0
+
+    console.print()
+    console.print(Panel("[bold green]%s[/]" % t("benchmark_history_header"), border_style="green"))
+    if not runs:
+        console.print()
+        console.print("[yellow]%s[/]" % t("benchmark_history_none"))
+        return 0
+    console.print(
+        "[dim]%s[/]" % (t("benchmark_history_runs") % len(runs))
+    )
+
+    for label_key, result_key, fmt in _COMPARE_METRICS:
+        console.print()
+        console.print("[bold]%s[/]" % t(label_key))
+        values = []
+        for run in runs:
+            try:
+                raw = run.get("results", {}).get(result_key, 0.0)
+                values.append(float(raw) if raw not in (None, "", False) else 0.0)
+            except (TypeError, ValueError):
+                values.append(0.0)
+        maximum = max(values) if values else 0.0
+        previous = None
+        for run, value in zip(runs, values):
+            ts = _short_ts(run.get("timestamp", "?"))
+            value_label = fmt % value if value > 0 else t("na")
+            line = "  [dim]%s[/]  %10s  %s" % (ts, value_label, _trend_bar(value, maximum))
+            line += _history_trend(value, previous)
+            console.print(line)
+            previous = value
+    console.print()
+    console.print("[dim]%s[/]" % t("benchmark_history_tip"))
+    return 0
 
 
 def _verdict(results):
@@ -234,15 +330,22 @@ def _verdict(results):
     return _VERDICT_KEYS[min(scores)]
 
 
-def run(console, t, as_json=False, compare=False, base=None):
+def run(console, t, as_json=False, compare=False, base=None, show_history=False, history_limit=None):
     """Run the benchmark suite and print the comparative table.
 
-    With ``compare=True`` (table mode only) the results are stored in
-    ``~/.sys-opt/benchmark.json`` and, when a previous baseline exists, an
-    extra ``Δ vs baseline`` column shows the percentage change per metric —
-    so running it before and after an optimization shows the gain at a
-    glance. JSON mode stays machine-pure and never writes the baseline.
+    With ``compare=True`` (table mode only) the results are appended to the
+    persisted history in ``~/.sys-opt/benchmark.json`` and, when a previous
+    baseline exists, an extra ``Δ vs baseline`` column shows the percentage
+    change per metric — so running it before and after an optimization shows
+    the gain at a glance. With ``show_history=True`` the saved runs are
+    rendered as per-metric ASCII trend charts (no stress test is run). JSON
+    mode stays machine-pure and never writes the history.
+
+    Note: the parameter is ``show_history`` (not ``history``) so it cannot
+    shadow the module-level :func:`history` renderer it dispatches to.
     """
+    if show_history:
+        return history(console, t, limit=history_limit, as_json=as_json, base=base)
     if compare and as_json:
         compare = False  # keep --benchmark --json pure for piping/scripts
     if not as_json:

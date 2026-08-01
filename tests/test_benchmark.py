@@ -12,12 +12,16 @@ from sys_opt.benchmark import (
     _delta_pct,
     _disk_benchmark,
     _ram_benchmark,
+    _trend_bar,
+    _short_ts,
     _verdict,
+    history,
     load_baseline,
+    load_history,
     run,
     save_baseline,
 )
-from sys_opt.i18n.languages import build_translator
+from sys_opt.i18n.languages import build_translator, LANGUAGES
 
 
 class TestBenchmark(unittest.TestCase):
@@ -132,6 +136,147 @@ class TestBenchmark(unittest.TestCase):
     def test_load_baseline_missing_returns_empty(self):
         with tempfile.TemporaryDirectory() as base:
             self.assertEqual(load_baseline(base=base), {})
+
+    def test_save_baseline_appends_to_history(self):
+        """Each --compare run appends; the baseline is always the newest."""
+        with tempfile.TemporaryDirectory() as base:
+            self.assertTrue(save_baseline({"cpu_mops": 1.0}, base=base))
+            self.assertTrue(save_baseline({"cpu_mops": 2.0}, base=base))
+            self.assertTrue(save_baseline({"cpu_mops": 3.0}, base=base))
+            history_runs = load_history(base=base)
+            self.assertEqual(len(history_runs), 3)
+            self.assertEqual(history_runs[0]["results"]["cpu_mops"], 1.0)
+            self.assertEqual(history_runs[-1]["results"]["cpu_mops"], 3.0)
+            # load_baseline returns the newest run (used by --compare)
+            self.assertEqual(load_baseline(base=base)["results"]["cpu_mops"], 3.0)
+
+    def test_load_history_backward_compatible_single_dict(self):
+        """Files written before --history stored a single run dict."""
+        import json as jsonlib
+
+        from sys_opt.benchmark import _baseline_path
+
+        with tempfile.TemporaryDirectory() as base:
+            payload = {"timestamp": "2026-01-01 00:00:00", "results": {"cpu_mops": 4.2}}
+            _baseline_path(base).write_text(
+                jsonlib.dumps(payload), encoding="utf-8"
+            )
+            history_runs = load_history(base=base)
+            self.assertEqual(len(history_runs), 1)
+            self.assertEqual(history_runs[0]["results"]["cpu_mops"], 4.2)
+            self.assertEqual(load_baseline(base=base)["results"]["cpu_mops"], 4.2)
+
+    def test_load_history_corrupt_returns_empty(self):
+        import json as jsonlib
+
+        from sys_opt.benchmark import _baseline_path
+
+        with tempfile.TemporaryDirectory() as base:
+            _baseline_path(base).write_text("not json at all", encoding="utf-8")
+            self.assertEqual(load_history(base=base), [])
+            self.assertEqual(load_baseline(base=base), {})
+            # garbage inside a valid list is dropped, not fatal
+            _baseline_path(base).write_text(
+                jsonlib.dumps([{"timestamp": "x", "results": {}}, "junk", 42]),
+                encoding="utf-8",
+            )
+            self.assertEqual(len(load_history(base=base)), 1)
+
+    def test_history_renders_ascii_bars_per_metric(self):
+        from io import StringIO
+
+        t = build_translator("en")
+        with tempfile.TemporaryDirectory() as base:
+            for cpu in (2.0, 4.0, 6.0):
+                save_baseline({"cpu_mops": cpu, "ram_mbps": 5000.0,
+                               "disk_write_mbps": 200.0, "disk_read_mbps": 300.0}, base=base)
+            stream = StringIO()
+            # highlight=False so numeric cells render as plain substrings we can assert
+            console = Console(file=stream, force_terminal=True, width=100, highlight=False)
+            rc = history(console, t, base=base)
+            output = stream.getvalue()
+            self.assertEqual(rc, 0)
+            self.assertIn("Benchmark History", output)
+            self.assertIn("Last 3 runs", output)
+            for label in ("CPU", "Memory (RAM)", "Disk (write)", "Disk (read)"):
+                self.assertIn(label, output)
+            self.assertIn("█", output)  # filled bars drawn
+            self.assertIn("░", output)  # empty bar cells
+            self.assertIn("▲", output)  # trend markers rendered
+            self.assertNotIn("MB/s", output.split("Benchmark History")[0])  # no stress run
+
+    def test_history_empty_message(self):
+        from io import StringIO
+
+        t = build_translator("en")
+        with tempfile.TemporaryDirectory() as base:
+            stream = StringIO()
+            console = Console(file=stream, force_terminal=True, width=100)
+            rc = history(console, t, base=base)
+            output = stream.getvalue()
+            self.assertEqual(rc, 0)
+            self.assertIn("Benchmark History", output)
+            self.assertIn("No benchmark history found", output)
+
+    def test_history_json_mode_is_pure(self):
+        import json as jsonlib
+        from io import StringIO
+
+        t = build_translator("en")
+        with tempfile.TemporaryDirectory() as base:
+            save_baseline({"cpu_mops": 1.0}, base=base)
+            stream = StringIO()
+            console = Console(file=stream, width=100)
+            rc = history(console, t, as_json=True, base=base)
+            data = jsonlib.loads(stream.getvalue())
+            self.assertEqual(rc, 0)
+            self.assertIsInstance(data, list)
+            self.assertEqual(data[0]["results"]["cpu_mops"], 1.0)
+
+    def test_history_limit_keeps_newest_runs(self):
+        from io import StringIO
+
+        t = build_translator("en")
+        with tempfile.TemporaryDirectory() as base:
+            for cpu in (1.0, 2.0, 3.0, 4.0):
+                save_baseline({"cpu_mops": cpu}, base=base)
+            stream = StringIO()
+            console = Console(file=stream, force_terminal=True, width=100, highlight=False)
+            rc = history(console, t, limit=2, base=base)
+            output = stream.getvalue()
+            self.assertEqual(rc, 0)
+            self.assertIn("Last 2 runs", output)
+            # newest two runs have cpu 3.0 and 4.0
+            self.assertIn("3.0", output)
+            self.assertIn("4.0", output)
+
+    def test_short_ts_and_bar_helpers(self):
+        self.assertEqual(_short_ts("2026-08-01 14:03:22"), "08-01 14:03")
+        self.assertEqual(_short_ts("garbage"), "garbage")
+        self.assertIn("█", _trend_bar(5.0, 10.0))
+        self.assertIn("░", _trend_bar(5.0, 10.0))
+        self.assertIn("░", _trend_bar(0.0, 10.0))
+
+    def test_history_i18n_placeholder_counts(self):
+        """benchmark_history_runs must carry exactly one %d in every language."""
+        for code, meta in LANGUAGES.items():
+            value = meta["strings"]["benchmark_history_runs"]
+            self.assertEqual(value.count("%d"), 1, "[%s] %r" % (code, value))
+
+    def test_run_with_history_flag_never_runs_stress(self):
+        """--benchmark --history reads the file and does not execute the suite."""
+        from io import StringIO
+
+        t = build_translator("en")
+        with tempfile.TemporaryDirectory() as base:
+            save_baseline({"cpu_mops": 3.0}, base=base)
+            stream = StringIO()
+            console = Console(file=stream, force_terminal=True, width=100, highlight=False)
+            rc = run(console, t, show_history=True, base=base)
+            output = stream.getvalue()
+            self.assertEqual(rc, 0)
+            self.assertIn("Benchmark History", output)
+            self.assertIn("Last 1 runs", output)
 
     def test_compare_first_run_creates_baseline_and_second_run_shows_delta(self):
         from io import StringIO
