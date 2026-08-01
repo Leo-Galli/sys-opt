@@ -1,0 +1,50 @@
+# Dependabot keeps the pinned GitHub Actions tags and the Python
+# dependencies fresh with automatic pull requests (weekly, Monday).
+version: 2
+updates:
+  # ------------------------------------------------------------------ #
+  # GitHub Actions — updates every action referenced in the workflows:
+  # actions/checkout@v4, actions/setup-python@v5, astral-sh/setup-uv@v5,
+  # actions/upload|download-artifact@v4, rhysd/actionlint@v1.7.12 and
+  # pypa/gh-action-pypi-publish@release/v1. Pinning to real tags matters
+  # (rhysd/actionlint has no floating v1 tag), so keeping them current is
+  # the job of Dependabot, not of manual edits.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Rome"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+
+  # ------------------------------------------------------------------ #
+  # Python dependencies — tracks requirements.txt (rich, psutil) and the
+  # [project] dependencies in pyproject.toml. Every PR is validated by
+  # the full CI matrix before merge.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Rome"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "python"
+    # No `include: scope` here: prefix "deps" + scope would read "deps(deps)".
+    commit-message:
+      prefix: "deps"
+    groups:
+      # One PR for the runtime deps instead of one per package.
+      runtime:
+        patterns:
+          - "rich"
+          - "psutil"
