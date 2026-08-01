@@ -1,0 +1,81 @@
+name: Dependabot auto-merge
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: write      # merge the PR and delete its head branch
+  pull-requests: write # enable auto-merge / leave comments
+  checks: read         # poll check runs via the Checks API (github-script)
+
+concurrency:
+  group: dependabot-auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  auto-merge:
+    name: Auto-merge Dependabot PR (CI green)
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    timeout-minutes: 25
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v3.1.0
+
+      # main has no required status checks, so GitHub's native auto-merge
+      # alone would merge immediately. Wait for the full CI matrix
+      # (lint + 40 tests + 3 package jobs) to finish green first.
+      - name: Wait for the full CI matrix to be green
+        uses: actions/github-script@v9.0.0
+        timeout-minutes: 20
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const ref = context.payload.pull_request.head.sha;
+            const failed = new Set(['failure', 'timed_out', 'action_required', 'cancelled']);
+            let ok = false;
+            for (let attempt = 0; attempt < 60; attempt++) {
+              const { data } = await github.rest.checks.listForRef({ owner, repo, ref, per_page: 100 });
+              const runs = data.check_runs;
+              const bad = runs.filter(r => r.status === 'completed' && failed.has(r.conclusion));
+              if (bad.length) {
+                throw new Error('CI check failed: ' + bad.map(r => r.name).join(', '));
+              }
+              const pending = runs.filter(r => r.status === 'queued' || r.status === 'in_progress');
+              if (runs.length > 0 && pending.length === 0) {
+                ok = true;
+                break;
+              }
+              await new Promise(resolve => setTimeout(resolve, 15000));
+            }
+            if (!ok) throw new Error('Timed out waiting for the CI checks to complete');
+            console.log('Full CI matrix is green');
+
+      # Safety default: minor & patch updates auto-merge; major updates
+      # (e.g. actions/checkout@v4 -> v5, rich 13 -> 14) get a comment and
+      # wait for a human review. Remove the `if:` line to auto-merge majors.
+      - name: Enable auto-merge (minor & patch updates)
+        if: steps.metadata.outputs.update-type != 'version-update:semver-major'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          if [ "$(gh pr view "$PR_URL" --json state --jq .state)" != "open" ]; then
+            echo "PR is not open — skipping auto-merge"
+            exit 0
+          fi
+          gh pr merge --auto --squash --delete-branch "$PR_URL"
+          echo "Auto-merge enabled: the PR will merge as soon as all checks pass"
+
+      - name: Comment that a major update needs review
+        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          if [ "$(gh pr view "$PR_URL" --json state --jq .state)" != "open" ]; then
+            exit 0
+          fi
+          gh pr comment "$PR_URL" --body "⚠️ **Major update** — the full CI matrix is green, but major versions can introduce breaking changes. Please review and merge manually."
