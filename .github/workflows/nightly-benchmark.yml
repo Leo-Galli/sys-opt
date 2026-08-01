@@ -46,7 +46,7 @@ jobs:
           python -m sys_opt --benchmark --json \
             | tee "bench-${{ matrix.os }}.json" \
             | python -c "import json,sys; json.load(sys.stdin); print('BENCHMARK JSON OK')"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: benchmark-${{ matrix.os }}
           path: bench-${{ matrix.os }}.json
