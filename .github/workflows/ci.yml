@@ -49,6 +49,43 @@ jobs:
             echo "::error::Hardcoded version literal in README.md — badges must stay dynamic (github/v/tag, pypi/v, pypi/pyversions, pypi/dm, pypi/dt)."
             exit 1
           fi
+      # Second-fastest guard: keep the dynamic PyPI/GitHub badge set exactly
+      # the canonical 5, each used once. A duplicated badge (two pypi/dt) or
+      # a newly invented endpoint (a 6th pypi/dw) fails here in ~1s. Kept in
+      # sync with DYNAMIC_BADGES / DYNAMIC_BADGE_ENDPOINT_RE and
+      # test_no_duplicate_or_extra_dynamic_badges in tests/test_readme.py.
+      - name: Reject duplicate or extra dynamic badges in README
+        run: |
+          # Strip the img.shields.io/ prefix so the endpoints below are bare
+          # (pypi/v/sys-opt, ...) and -x whole-line exact match works.
+          BADGES="$(grep -oE 'img\.shields\.io/(pypi|github/v)/[A-Za-z0-9._/-]+' README.md | sed 's|^img\.shields\.io/||')"
+          DUPS="$(printf '%s\n' "$BADGES" | sort | uniq -d)"
+          # -x = whole-line exact match, mirroring the Python test's exact
+          # set difference (a substring match could hide e.g. sys-opt-beta).
+          UNKNOWN="$(printf '%s\n' "$BADGES" | sort -u | grep -vEx '(pypi/v/sys-opt|pypi/pyversions/sys-opt|pypi/dm/sys-opt|pypi/dt/sys-opt|github/v/tag/Leo-Galli/sys-opt)' || true)"
+          if [ -n "$DUPS" ] || [ -n "$UNKNOWN" ]; then
+            echo "::error::README.md must keep exactly the 5 canonical dynamic PyPI/GitHub badges, each once. Duplicates: ${DUPS} Extra: ${UNKNOWN}"
+            exit 1
+          fi
+      # Coherence guard: the 'Releasing to PyPI' section must keep documenting
+      # the v* tag flow and release.yml must still trigger on v* tags, so docs
+      # and workflow cannot drift apart. Kept in sync with
+      # test_releasing_section_uses_vstar_tags in tests/test_readme.py.
+      - name: Verify Releasing section matches v* tag workflow
+        run: |
+          # `v*` backtick form only occurs in the Releasing section prose
+          # (the badge URL uses filter=v*, which we intentionally skip).
+          if ! grep -q '`v\*' README.md || ! grep -q 'git push origin v' README.md; then
+            echo "::error::README 'Releasing to PyPI' section must document the v* tag flow (git tag vX.Y.Z && git push origin vX.Y.Z)."
+            exit 1
+          fi
+          # -A1 prints the line right after 'tags:' ('- "v*"'), avoiding
+          # fragile \n-in-pattern tricks (grep can never match a newline
+          # inside a line; -z changes the record separator instead).
+          if ! grep -A1 '^[[:space:]]*tags:' .github/workflows/release.yml | grep -q '"v\*"'; then
+            echo "::error::release.yml must trigger on v* tags, matching the README 'Releasing to PyPI' section."
+            exit 1
+          fi
       # Fails fast: needs only the repo, so run it BEFORE any Python/uv
       # setup. Validates the YAML syntax AND the ${{ }} expressions of
       # every .github/workflows/*.yml in ~1s, so a broken workflow is
