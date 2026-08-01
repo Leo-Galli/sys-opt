@@ -110,6 +110,28 @@ def _print_banner(console):
     console.print(Panel(Text(_SYS_OPT_BANNER, style="bold cyan"), border_style="cyan"))
 
 
+def _choose_profile(console, t):
+    from rich.panel import Panel
+    from rich.prompt import Prompt
+    from rich.table import Table
+
+    table = Table(box=None, show_header=False, padding=(0, 2))
+    table.add_column()
+    for index, code in enumerate(optimizer.PROFILE_ORDER, start=1):
+        table.add_row(
+            "[bold cyan][%d][/] %s" % (index, t(optimizer.PROFILE_LABEL_KEYS[code]))
+        )
+    console.print(Panel(table, title="[bold]%s[/]" % t("profile_prompt"), border_style="cyan"))
+    try:
+        choice = Prompt.ask(t("profile_prompt"), default="1", show_default=False)
+        choice_int = int(choice)
+    except Exception:
+        choice_int = 1
+    if 1 <= choice_int <= len(optimizer.PROFILE_ORDER):
+        return optimizer.PROFILE_ORDER[choice_int - 1]
+    return "all"
+
+
 def _pause(console, t):
     try:
         console.input(t("press_enter"))
@@ -137,11 +159,12 @@ def _interactive(console, initial_language):
             inspector.run(console, t, rtl=LANGUAGES[language]["dir"] == "rtl")
             _pause(console, t)
         elif choice == "2":
-            optimizer.run(console, t)
+            optimizer.run(console, t, profile=_choose_profile(console, t))
             _pause(console, t)
         elif choice == "3":
+            profile = _choose_profile(console, t)
             inspector.run(console, t, rtl=LANGUAGES[language]["dir"] == "rtl")
-            optimizer.run(console, t)
+            optimizer.run(console, t, profile=profile)
             _pause(console, t)
         elif choice == "4":
             language = _choose_language(console, t)
@@ -168,6 +191,10 @@ def main(argv=None):
     parser.add_argument("--suite", action="store_true", help="Inspect then optimize, then exit.")
     parser.add_argument("--dry-run", action="store_true", help="Show optimization steps without executing them.")
     parser.add_argument("--force", action="store_true", help="Skip the elevation confirmation prompt.")
+    parser.add_argument(
+        "--profile", "-p", default="all", choices=optimizer.PROFILE_ORDER,
+        help="Optimization profile: %s" % ", ".join(optimizer.PROFILE_ORDER),
+    )
     parser.add_argument(
         "--language", "-l", default=None, metavar="CODE",
         help="Language code: %s" % ", ".join(LANGUAGE_ORDER),
@@ -200,10 +227,10 @@ def main(argv=None):
         inspector.run(console, t, as_json=args.json, rtl=rtl)
         return 0
     if args.optimize:
-        return optimizer.run(console, t, dry_run=args.dry_run, force=args.force)
+        return optimizer.run(console, t, dry_run=args.dry_run, force=args.force, profile=args.profile)
     if args.suite:
         inspector.run(console, t, as_json=args.json, rtl=rtl)
-        return optimizer.run(console, t, dry_run=args.dry_run, force=args.force)
+        return optimizer.run(console, t, dry_run=args.dry_run, force=args.force, profile=args.profile)
 
     if not sys.stdin.isatty():
         _print_languages(console)

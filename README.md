@@ -233,10 +233,29 @@ python -m sys_opt        # or just: sys-opt  (after pip install)
 | `python -m sys_opt --optimize` | Run the system optimization |
 | `python -m sys_opt --optimize --dry-run` | Preview every step, execute nothing |
 | `python -m sys_opt --optimize --force` | Skip the elevation confirmation prompt |
+| `python -m sys_opt --optimize --profile gaming` | Run a specific profile (see below) |
 | `python -m sys_opt --suite` | Inspect **then** optimize |
 | `python -m sys_opt --language it --inspect` | Force a specific language (`it`, `en`, `es`, `fr`, `de`, `pt`, `ru`, `zh`, `ja`, `ar`) |
 | `python -m sys_opt --list-languages` | List all supported languages |
 | `python -m sys_opt --version` | Show the version |
+
+### 🎯 Optimization profiles
+
+Choose what kind of optimization to run — interactively from the menu, or with `--profile <name>`:
+
+| Profile | What it runs | Best for |
+|---|---|---|
+| `all` · ⚡ Full | Every step for your OS | One-shot complete tune-up |
+| `gaming` · 🎮 Gaming | Power plan, GPU scheduling (HAGS), Game DVR off, services, caches | Frame rate / FPS |
+| `ai` · 🤖 AI / ML | High performance: power plan, services, caches, kernel memory release | Training & heavy workloads |
+| `studio` · 💼 Studio / Work | Light & safe: temp files, DNS, update cache, services | Daily work, no side effects |
+| `clean` · 🧹 Cleanup | Just temp files, caches and DNS — no power/service changes | Quick hygiene |
+
+```bash
+python -m sys_opt --optimize --profile gaming
+python -m sys_opt --suite --profile studio
+python -m sys_opt --optimize --profile ai --dry-run
+```
 
 ### 🔐 Elevation
 
@@ -345,6 +364,8 @@ The suite (18 tests) asserts: identical key sets across all 10 languages, Englis
 **Which languages are supported?** 10: Italian, English, Spanish, French, German, Portuguese, Russian, Chinese (Simplified), Japanese, Arabic (RTL).
 
 **How do I change the language?** Menu → `[4] 🌐 Change Language`, or pass `--language <code>`.
+
+**How do I choose what to optimize?** The menu asks for an **optimization profile** (Gaming, AI, Studio, Cleanup or Full) whenever you pick *Run System Optimization* or *Full Suite*; from the CLI use `--profile <name>`.
 
 ---
 

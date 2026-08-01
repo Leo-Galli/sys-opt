@@ -259,8 +259,38 @@ def _step_linux_pkg_cache(t, elevated, dry_run):
 # --------------------------------------------------------------------------- #
 # Step assembly + runner
 # --------------------------------------------------------------------------- #
-def build_steps(t, elevated, dry_run):
-    """Return [(localized_label, step_callable)] for the current OS."""
+#: Optimization profiles (order used by the interactive chooser).
+PROFILE_ORDER = ["all", "gaming", "ai", "studio", "clean"]
+
+#: Profile code -> i18n key for its label.
+PROFILE_LABEL_KEYS = {
+    "all": "profile_all",
+    "gaming": "profile_gaming",
+    "ai": "profile_ai",
+    "studio": "profile_studio",
+    "clean": "profile_clean",
+}
+
+#: Which profiles include each step. Steps without an entry run in every profile.
+_STEP_PROFILES = {
+    _step_win_temp: {"all", "gaming", "ai", "studio", "clean"},
+    _step_win_services: {"all", "gaming", "ai", "studio"},
+    _step_win_power: {"all", "gaming", "ai"},
+    _step_win_gpu_sched: {"all", "gaming"},
+    _step_win_game_dvr: {"all", "gaming"},
+    _step_win_dns: {"all", "gaming", "ai", "studio", "clean"},
+    _step_win_update_cache: {"all", "gaming", "ai", "studio", "clean"},
+    _step_mac_caches: {"all", "gaming", "ai", "studio", "clean"},
+    _step_mac_dns: {"all", "gaming", "ai", "studio", "clean"},
+    _step_mac_purge: {"all", "gaming", "ai"},
+    _step_linux_tmp: {"all", "gaming", "ai", "studio", "clean"},
+    _step_linux_drop_caches: {"all", "gaming", "ai"},
+    _step_linux_pkg_cache: {"all", "gaming", "ai", "studio", "clean"},
+}
+
+
+def _steps_for_os(t):
+    """Return every step for the current OS, in execution order."""
     if os.name == "nt":
         return [
             (t("step_temp"), _step_win_temp),
@@ -284,13 +314,28 @@ def build_steps(t, elevated, dry_run):
     ]
 
 
+def build_steps(t, elevated, dry_run, profile="all"):
+    """Return [(localized_label, step_callable)] for the current OS & profile.
+
+    ``profile`` must be one of PROFILE_ORDER; 'all' returns every step.
+    """
+    steps = _steps_for_os(t)
+    if profile == "all":
+        return steps
+    return [
+        (label, step)
+        for (label, step) in steps
+        if profile in _STEP_PROFILES.get(step, set(PROFILE_ORDER))
+    ]
+
+
 def _elevation_instructions(t):
     if os.name == "nt":
         return t("elevation_win")
     return t("elevation_posix")
 
 
-def run(console, t, dry_run=False, force=False):
+def run(console, t, dry_run=False, force=False, profile="all"):
     """Run the optimizer: elevation gate, disclaimer, steps, summary."""
     elevated = is_admin()
 
@@ -325,17 +370,19 @@ def run(console, t, dry_run=False, force=False):
             border_style="yellow",
         )
     )
+    profile_label = t(PROFILE_LABEL_KEYS.get(profile, PROFILE_LABEL_KEYS["all"]))
     console.print()
     console.print(
         Panel(
-            "[bold green]%s[/] (%s)" % (t("optimize_header"), "dry-run" if dry_run else t("running")),
+            "[bold green]%s[/] · %s (%s)"
+            % (t("optimize_header"), profile_label, "dry-run" if dry_run else t("running")),
             border_style="green",
         )
     )
 
     results = []
     gpu_sched_ok = False
-    for label, step in build_steps(t, elevated, dry_run):
+    for label, step in build_steps(t, elevated, dry_run, profile=profile):
         try:
             if not dry_run:
                 with console.status("[bold]%s[/] ..." % label):
