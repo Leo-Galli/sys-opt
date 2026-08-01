@@ -7,7 +7,16 @@ import unittest
 
 from rich.console import Console
 
-from sys_opt.benchmark import _cpu_benchmark, _disk_benchmark, _ram_benchmark, _verdict, run
+from sys_opt.benchmark import (
+    _cpu_benchmark,
+    _delta_pct,
+    _disk_benchmark,
+    _ram_benchmark,
+    _verdict,
+    load_baseline,
+    run,
+    save_baseline,
+)
 from sys_opt.i18n.languages import build_translator
 
 
@@ -105,6 +114,76 @@ class TestBenchmark(unittest.TestCase):
             {"cpu_mops", "ram_mbps", "disk_write_mbps", "disk_read_mbps", "elapsed_seconds"},
         )
         self.assertNotIn("🟢", stream.getvalue())
+
+    def test_delta_pct(self):
+        self.assertAlmostEqual(_delta_pct(120.0, 100.0), 20.0)
+        self.assertAlmostEqual(_delta_pct(80.0, 100.0), -20.0)
+        self.assertIsNone(_delta_pct(0.0, 100.0))
+        self.assertIsNone(_delta_pct(100.0, 0.0))
+        self.assertIsNone(_delta_pct(None, 100.0))
+
+    def test_baseline_roundtrip(self):
+        with tempfile.TemporaryDirectory() as base:
+            self.assertTrue(save_baseline({"cpu_mops": 5.0}, base=base))
+            loaded = load_baseline(base=base)
+            self.assertEqual(loaded["results"]["cpu_mops"], 5.0)
+            self.assertIn("timestamp", loaded)
+
+    def test_load_baseline_missing_returns_empty(self):
+        with tempfile.TemporaryDirectory() as base:
+            self.assertEqual(load_baseline(base=base), {})
+
+    def test_compare_first_run_creates_baseline_and_second_run_shows_delta(self):
+        from io import StringIO
+
+        t = build_translator("en")
+        with tempfile.TemporaryDirectory() as base:
+            # First run: no baseline yet -> friendly notice + baseline saved.
+            first_stream = StringIO()
+            console = Console(file=first_stream, force_terminal=True, width=100)
+            rc = run(console, t, compare=True, base=base)
+            first_output = first_stream.getvalue()
+            self.assertEqual(rc, 0)
+            self.assertIn("No previous benchmark found", first_output)
+            self.assertIn("Baseline saved", first_output)
+
+            # Second run: baseline exists -> delta column rendered.
+            second_stream = StringIO()
+            console = Console(file=second_stream, force_terminal=True, width=100)
+            rc = run(console, t, compare=True, base=base)
+            second_output = second_stream.getvalue()
+            self.assertEqual(rc, 0)
+            self.assertIn("Δ vs baseline", second_output)
+            self.assertIn("Baseline from", second_output)
+            self.assertIn("%", second_output)  # a delta percentage is shown
+
+    def test_plain_run_does_not_write_baseline(self):
+        from io import StringIO
+
+        with tempfile.TemporaryDirectory() as base:
+            stream = StringIO()
+            console = Console(file=stream, force_terminal=True, width=100)
+            rc = run(console, build_translator("en"), base=base)
+            self.assertEqual(rc, 0)
+            self.assertEqual(load_baseline(base=base), {})
+
+    def test_json_mode_ignores_compare(self):
+        """--benchmark --json stays machine-pure: no baseline file, no text."""
+        import json as jsonlib
+        from io import StringIO
+
+        with tempfile.TemporaryDirectory() as base:
+            stream = StringIO()
+            console = Console(file=stream, width=100)
+            rc = run(console, build_translator("en"), as_json=True, compare=True, base=base)
+            data = jsonlib.loads(stream.getvalue())
+            self.assertEqual(rc, 0)
+            self.assertNotIn("Δ vs baseline", stream.getvalue())
+            self.assertEqual(load_baseline(base=base), {})
+            self.assertEqual(
+                set(data),
+                {"cpu_mops", "ram_mbps", "disk_write_mbps", "disk_read_mbps", "elapsed_seconds"},
+            )
 
     def test_run_json_mode_stays_valid_on_narrow_console(self):
         """Smoke: benchmark JSON stays machine-parseable on a narrow

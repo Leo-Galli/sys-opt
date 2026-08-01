@@ -20,7 +20,7 @@ except Exception:  # pragma: no cover - optional dependency
 from rich.panel import Panel
 from rich.table import Table
 
-from .utils import format_bytes
+from .utils import config_dir, format_bytes
 
 _BAR_WIDTH = 12
 
@@ -142,6 +142,71 @@ def _trend_bar(value, maximum):
     return "[green]%s[/][dim]%s[/]" % ("█" * filled, "░" * (_BAR_WIDTH - filled))
 
 
+#: Metrics shown in the comparison table: (i18n key, result key, fmt).
+_COMPARE_METRICS = (
+    ("benchmark_cpu", "cpu_mops", "%.2f M ops/s"),
+    ("benchmark_ram", "ram_mbps", "%.0f MB/s"),
+    ("benchmark_disk_write", "disk_write_mbps", "%.0f MB/s"),
+    ("benchmark_disk_read", "disk_read_mbps", "%.0f MB/s"),
+)
+
+
+def _baseline_path(base=None):
+    """Path of the persisted benchmark baseline (inside ~/.sys-opt)."""
+    return config_dir(base) / "benchmark.json"
+
+
+def load_baseline(base=None):
+    """Load the last saved benchmark; returns {} on any failure."""
+    try:
+        data = json.loads(_baseline_path(base).read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def save_baseline(results, base=None):
+    """Persist benchmark results with a timestamp for later comparison.
+
+    Never raises (zero-crash policy): a missing/read-only config dir simply
+    means the baseline is not stored.
+    """
+    try:
+        directory = config_dir(base)
+        directory.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "results": results,
+        }
+        _baseline_path(base).write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
+        return True
+    except Exception:
+        return False
+
+
+def _delta_pct(new_value, old_value):
+    """Percentage change of new vs old; None when either is unusable."""
+    try:
+        new_value = float(new_value)
+        old_value = float(old_value)
+    except (TypeError, ValueError):
+        return None
+    if new_value <= 0 or old_value <= 0:
+        return None
+    return (new_value - old_value) / old_value * 100.0
+
+
+def _delta_cell(delta):
+    """Color-coded Δ cell: green for improvement, red for regression, — when N/A."""
+    if delta is None:
+        return "[dim]—[/]"
+    sign = "+" if delta >= 0 else ""
+    color = "green" if delta >= 0 else "red"
+    return "[%s]%s%.1f%%[/]" % (color, sign, delta)
+
+
 def _verdict(results):
     """Map results to a verdict i18n key (0=slow .. 3=great).
 
@@ -169,8 +234,17 @@ def _verdict(results):
     return _VERDICT_KEYS[min(scores)]
 
 
-def run(console, t, as_json=False):
-    """Run the benchmark suite and print the comparative table."""
+def run(console, t, as_json=False, compare=False, base=None):
+    """Run the benchmark suite and print the comparative table.
+
+    With ``compare=True`` (table mode only) the results are stored in
+    ``~/.sys-opt/benchmark.json`` and, when a previous baseline exists, an
+    extra ``Δ vs baseline`` column shows the percentage change per metric —
+    so running it before and after an optimization shows the gain at a
+    glance. JSON mode stays machine-pure and never writes the baseline.
+    """
+    if compare and as_json:
+        compare = False  # keep --benchmark --json pure for piping/scripts
     if not as_json:
         context = _context()
         console.print()
@@ -202,6 +276,10 @@ def run(console, t, as_json=False):
         console.file.write(json.dumps(results, indent=2) + "\n")
         return 0
 
+    baseline = load_baseline(base) if compare else {}
+    baseline_results = baseline.get("results") if isinstance(baseline.get("results"), dict) else None
+    has_baseline = baseline_results is not None
+
     header_parts = []
     if context.get("cpu_count"):
         header_parts.append("%d %s" % (context["cpu_count"], t("label_threads")))
@@ -217,28 +295,35 @@ def run(console, t, as_json=False):
     )
     table.add_column(t("benchmark_col_component"), style="bold")
     table.add_column(t("benchmark_col_result"), justify="right")
+    if has_baseline:
+        table.add_column(t("benchmark_col_delta"), justify="right")
     table.add_column(t("benchmark_col_trend"), justify="center")
-    table.add_row(
-        t("benchmark_cpu"),
-        "%.2f M ops/s" % cpu_mops if cpu_mops > 0 else t("na"),
-        _trend_bar(cpu_mops, maximum),
-    )
-    table.add_row(
-        t("benchmark_ram"),
-        "%.0f MB/s" % ram_mbps if ram_mbps > 0 else t("na"),
-        _trend_bar(ram_mbps, maximum),
-    )
-    table.add_row(
-        t("benchmark_disk_write"),
-        "%.0f MB/s" % write_mbps if write_mbps > 0 else t("na"),
-        _trend_bar(write_mbps, maximum),
-    )
-    table.add_row(
-        t("benchmark_disk_read"),
-        "%.0f MB/s" % read_mbps if read_mbps > 0 else t("na"),
-        _trend_bar(read_mbps, maximum),
-    )
+    values = {
+        "cpu_mops": cpu_mops,
+        "ram_mbps": ram_mbps,
+        "disk_write_mbps": write_mbps,
+        "disk_read_mbps": read_mbps,
+    }
+    for label_key, result_key, fmt in _COMPARE_METRICS:
+        value = values[result_key]
+        cells = [t(label_key), fmt % value if value > 0 else t("na")]
+        if has_baseline:
+            cells.append(_delta_cell(_delta_pct(value, baseline_results.get(result_key))))
+        cells.append(_trend_bar(value, maximum))
+        table.add_row(*cells)
     console.print(table)
+
+    if compare:
+        console.print()
+        console.print("[bold cyan]%s[/]" % t("benchmark_compare_header"))
+        if has_baseline:
+            console.print(
+                "[dim]%s[/]" % (t("benchmark_baseline_from") % baseline.get("timestamp", "?"))
+            )
+        else:
+            console.print("[yellow]%s[/]" % t("benchmark_no_baseline"))
+        if save_baseline(results, base=base):
+            console.print("[dim]%s[/]" % t("benchmark_baseline_saved"))
 
     # Explanation + verdict (plain table mode only; --json stays untouched).
     console.print()

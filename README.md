@@ -270,6 +270,7 @@ Arrow keys move the **▸** cursor, **Enter** selects, **Esc** cancels, and **1-
 | `python -m sys_opt --optimize --profile gaming` | Run a specific profile (see below) |
 | `python -m sys_opt --suite` | Inspect **then** optimize |
 | `python -m sys_opt --benchmark` | Run a light CPU / RAM / disk benchmark with a comparative table |
+| `python -m sys_opt --benchmark --compare` | Benchmark, save the result in `~/.sys-opt` and show the **% change vs the previous baseline** |
 | `python -m sys_opt --benchmark --json` | Emit benchmark results as JSON (scripting) |
 | `python -m sys_opt --language it --inspect` | Force a specific language (`it`, `en`, `es`, `fr`, `de`, `pt`, `ru`, `zh`, `ja`, `ar`) |
 | `python -m sys_opt --list-languages` | List all supported languages |
@@ -300,6 +301,7 @@ Runs a short, lightweight stress test and shows a comparative table — run it *
 ```bash
 python -m sys_opt --benchmark
 python -m sys_opt --benchmark --json
+python -m sys_opt --benchmark --compare
 ```
 
 | Measured | What it tests |
@@ -308,6 +310,10 @@ python -m sys_opt --benchmark --json
 | RAM | Repeated buffer copies → memory bandwidth (`MB/s`) |
 | Disk (write) | Writes a temp file with `fsync` → write speed (`MB/s`) |
 | Disk (read) | Reads the temp file back → read speed (`MB/s`) |
+
+### 📉 Measure your optimization with `--compare`
+
+Run `python -m sys_opt --benchmark --compare` **before** optimizing — it saves the result as your **baseline** in `~/.sys-opt/benchmark.json`. Then optimize, and run the same command again: each metric now shows a color-coded **Δ vs baseline** column (+% in green = improvement, −% in red = regression), so the gain from `--optimize` is visible at a glance. Every `--compare` run stores a new baseline for the next comparison. `--benchmark --json` stays machine-pure and never writes the baseline file.
 
 Each row also shows a relative **trend bar** comparing it against the fastest measured component. After the table, the tool **explains what every number means** (CPU ops/s, RAM bandwidth, disk speeds) and prints an **overall health verdict** based on your weakest component:
 

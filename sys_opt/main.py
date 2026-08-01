@@ -175,6 +175,10 @@ def main(argv=None):
     parser.add_argument("--optimize", action="store_true", help="Run system optimization and exit.")
     parser.add_argument("--suite", action="store_true", help="Inspect then optimize, then exit.")
     parser.add_argument("--benchmark", action="store_true", help="Run a light CPU/RAM/disk benchmark and exit.")
+    parser.add_argument(
+        "--compare", action="store_true",
+        help="With --benchmark: save the result in ~/.sys-opt and show the %% change vs the previous baseline.",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Show optimization steps without executing them.")
     parser.add_argument("--force", action="store_true", help="Skip the elevation confirmation prompt.")
     parser.add_argument(
@@ -225,7 +229,7 @@ def main(argv=None):
         inspector.run(console, t, as_json=args.json, rtl=rtl)
         return optimizer.run(console, t, dry_run=args.dry_run, force=args.force, profile=args.profile)
     if args.benchmark:
-        return benchmark.run(console, t, as_json=args.json)
+        return benchmark.run(console, t, as_json=args.json, compare=args.compare)
 
     if not sys.stdin.isatty():
         _print_languages(console)
