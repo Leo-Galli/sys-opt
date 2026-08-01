@@ -20,7 +20,9 @@ Design notes:
 import contextlib
 import io
 import json
+import tempfile
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from rich.console import Console
@@ -120,6 +122,52 @@ class TestCliSmoke(unittest.TestCase):
         code, output = run_cli(["--benchmark", "--history", "--language", "en"])
         self.assertEqual(code, 0)
         self.assertIn("Benchmark History", output)
+
+    def test_benchmark_report_flag(self):
+        """--benchmark --report runs the baseline flow and writes the HTML report.
+
+        The report is written to a temporary config dir and the browser open is
+        mocked, so the smoke stays hermetic (no stress leftovers in ~/.sys-opt,
+        no real browser on CI).
+        """
+        with tempfile.TemporaryDirectory() as base:
+            with mock.patch("sys_opt.report.webbrowser.open", return_value=True), \
+                    mock.patch("sys_opt.report.config_dir", return_value=Path(base)), \
+                    mock.patch("sys_opt.benchmark.config_dir", return_value=Path(base)):
+                code, output = run_cli(["--benchmark", "--report", "--language", "en"])
+                self.assertEqual(code, 0)
+                self.assertIn("Report saved", output)
+                # Assert inside the ``with``: TemporaryDirectory is cleaned up
+                # on exit, so globbing after it would always be empty.
+                reports = list(Path(base).glob("reports/*.html"))
+                self.assertEqual(len(reports), 1)
+                self.assertIn("<html", reports[0].read_text(encoding="utf-8"))
+
+    def test_benchmark_file_flag_blocks_are_wired(self):
+        """--benchmark-file starts the loopback server (mocked, so it never
+        blocks the smoke) and dispatches to the filebench module."""
+        with mock.patch("sys_opt.filebench.run", return_value=0) as mocked:
+            code, _output = run_cli(["--benchmark-file", "--language", "en"])
+        self.assertEqual(code, 0)
+        mocked.assert_called_once()
+
+    def test_optimize_report_flag(self):
+        """--optimize --report --dry-run runs benchmark-before, the optimizer
+        dry run, benchmark-after and writes the HTML report."""
+        with tempfile.TemporaryDirectory() as base:
+            with mock.patch("sys_opt.report.webbrowser.open", return_value=True), \
+                    mock.patch("sys_opt.report.config_dir", return_value=Path(base)), \
+                    mock.patch("sys_opt.benchmark.config_dir", return_value=Path(base)):
+                code, output = run_cli(
+                    ["--optimize", "--report", "--dry-run", "--language", "en"]
+                )
+                self.assertEqual(code, 0)
+                self.assertIn("Report saved", output)
+                self.assertIn("System Optimization", output)
+                # Assert inside the ``with`` (TemporaryDirectory is removed on exit).
+                reports = list(Path(base).glob("reports/*.html"))
+                self.assertEqual(len(reports), 1)
+                self.assertIn("before", reports[0].read_text(encoding="utf-8").lower())
 
     def test_unsupported_language_flag_falls_back(self):
         """An unknown --language must not crash; it detects/falls back.

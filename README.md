@@ -90,6 +90,10 @@
 
 **📊 Performance benchmark** — lightweight CPU / RAM / disk stress tests (psutil-backed) with a comparative trend table, a plain-language **explanation of every number** and an **overall health verdict** (🟢 Excellent → 🔴 Below average), perfect for measuring the effect of your optimization.
 
+**🖥️ HTML performance report (`--report`)** — when you optimize, sys-opt **automatically runs a complete benchmark before and after** the optimization, writes a beautiful self-contained HTML report (dark theme, no external assets) with **all your system specs** (OS, motherboard, CPU, RAM, GPU, storage, partitions) **plus the before/after benchmark comparison with % change**, saves it to `~/.sys-opt/reports/` and opens it in your default browser — so the gain of every optimization is measured and visible at a glance.
+
+**📁 Benchmark a file in the browser (`--benchmark-file`)** — starts a local server (bound to `127.0.0.1` only), opens a **drag & drop upload page** in your browser, **recognizes the file extension** (`.py` `.c` `.cpp` `.rs` `.go` `.exe` `.sh` `.js` `.jar` `.php` `.rb`...), compiles it when needed and **executes it with a hard timeout**, reporting wall time, CPU time, exit code and output size. ⚠️ **WARNING: sys-opt does NOT inspect the file content — it executes it.** Only upload files you trust, from your own machine (the warning is shown on the page and in the terminal).
+
 **🌐 i18n engine** — 10 complete languages, **zero missing keys** (enforced by tests), automatic locale detection, on-the-fly switching, RTL-aware layout for Arabic. The language you pick on **first launch is remembered forever** on that machine (stored in `~/.sys-opt/config.json`) — change it any time from the menu.
 
 **⌨️ Arrow-key menus** — navigate the menu, the language picker and the profile chooser with **↑/↓ + Enter** (Esc cancels, digits jump straight to an item). On non-TTY terminals (pipes, CI) it falls back to a numbered prompt, so scripts never hang.
@@ -278,6 +282,11 @@ Arrow keys move the **▸** cursor, **Enter** selects, **Esc** cancels, and **1-
 | `python -m sys_opt --benchmark --history --history-limit 10` | Show only the last **10** runs (default: all saved) |
 | `python -m sys_opt --benchmark --history --json` | Emit the saved run history as JSON (scripting) |
 | `python -m sys_opt --benchmark --json` | Emit benchmark results as JSON (scripting) |
+| `python -m sys_opt --benchmark --report` | Benchmark + write an **HTML report with all specs** to `~/.sys-opt/reports` and open it in your browser |
+| `python -m sys_opt --optimize --report` | **Complete benchmark before → optimize → complete benchmark after** → HTML report with the before/after comparison, opened in your browser |
+| `python -m sys_opt --suite --report` | Inspect + optimize with the automatic before/after benchmark + HTML report |
+| `python -m sys_opt --benchmark-file` | **Benchmark a file in the browser**: opens an upload page, detects the extension, executes it with a timeout (⚠️ content is NOT inspected) |
+| `python -m sys_opt --benchmark-file --benchmark-file-port 9000` | Choose the port for `--benchmark-file` (default: `8765`) |
 | `python -m sys_opt --language it --inspect` | Force a specific language (`it`, `en`, `es`, `fr`, `de`, `pt`, `ru`, `zh`, `ja`, `ar`) |
 | `python -m sys_opt --list-languages` | List all supported languages |
 | `python -m sys_opt --version` | Show the version |
@@ -359,6 +368,53 @@ How it works:
 - Confirm with `all`, `none`, or a subset like `1,3` — **only the steps you confirm are executed**, each with the normal safety net (skipped if elevation is missing, zero-crash on errors).
 - `--dry-run` shows the ranked table and exits without asking anything — perfect for scripting and CI.
 - The impact stars are **profile-aware**: FPS-critical steps (GPU scheduling, Game DVR, power plan) score ★★★★★ under `gaming`, while the `clean` profile weights disk/cache cleanup higher.
+
+### 🖥️ HTML performance report (`--report`)
+
+Run the **full measured optimization loop** in one command:
+
+```bash
+python -m sys_opt --optimize --report        # benchmark before → optimize → benchmark after → report
+python -m sys_opt --benchmark --report       # just benchmark + spec report
+python -m sys_opt --suite --report           # inspect + optimize + before/after report
+```
+
+What happens:
+1. A **complete benchmark runs automatically** (CPU / RAM / disk) and is saved as the *before* baseline.
+2. The optimizer applies the selected profile's steps.
+3. A **second complete benchmark** runs and is saved as the *after* run — every `--compare`-style history entry is preserved in `~/.sys-opt/benchmark.json`, so `--benchmark --history` shows the trend too.
+4. A self-contained **HTML report** (inline CSS, no external assets) is written to `~/.sys-opt/reports/sys-opt-report-<timestamp>.html` and **opened in your default browser**. It contains:
+   - **All system specs** — OS & kernel, motherboard, CPU, RAM, GPU(s), storage drives, partitions.
+   - The **before/after benchmark table** with color-coded **% change** per metric (green = improvement, red = regression) and the **overall health verdict**.
+
+The report is fully localized in your chosen language (10 languages, RTL-aware for Arabic). If no browser is available (headless CI), the report path is still printed so you can open it manually.
+
+### 📁 Benchmark a file in the browser (`--benchmark-file`)
+
+```bash
+python -m sys_opt --benchmark-file
+# → opens http://127.0.0.1:8765/ in your browser (port configurable with --benchmark-file-port)
+```
+
+A local server starts **bound to `127.0.0.1` only** and opens a page where you **drag & drop or choose a file**. sys-opt recognizes the extension and decides how to run it:
+
+| Extension | How it runs |
+|---|---|
+| `.py` | `python file.py` (your current interpreter) |
+| `.c` `.cc` `.cpp` `.cxx` | Compiled with `cc`/`gcc`/`clang` (`-O2`) then executed |
+| `.rs` | Compiled with `rustc` (`-O`) then executed |
+| `.go` | `go run file.go` |
+| `.js` | `node file.js` |
+| `.jar` | `java -jar file.jar` |
+| `.php` | `php file.php` |
+| `.rb` | `ruby file.rb` |
+| `.sh` | `sh file.sh` (or `bash`) |
+| `.exe` | Run directly (Windows) / `./file.exe` |
+| `.bat` `.cmd` | `cmd /c file.bat` (Windows) |
+
+Each run reports **wall time**, **CPU time**, **exit code** and **output size** (with an output preview), under a **hard 30-second timeout** — runaway code is killed, never hangs your machine. Unknown extensions are refused with a clear message.
+
+> ⚠️ **SECURITY — read this:** sys-opt **executes the file you upload and does NOT inspect its content**. The server binds to loopback only, files live in a fresh temp directory removed after the run, and every run is timeout-bounded — but **only upload files you trust**, from your own machine. The warning is displayed prominently on the page and in the terminal.
 
 ### 📊 Performance benchmark
 
@@ -473,7 +529,8 @@ sys-opt/
 ├── .github/workflows/
 │   ├── ci.yml                  # lint + tests on Windows / macOS / Linux
 │   ├── release.yml             # publish to PyPI on every v* tag
-│   └── nightly-benchmark.yml   # nightly CPU/RAM/disk benchmark + report
+│   ├── nightly-benchmark.yml   # nightly CPU/RAM/disk benchmark + report
+│   └── dependabot-automerge.yml# auto-merge green Dependabot PRs
 ├── .github/scripts/
 │   └── update_benchmarks.py    # merge nightly results into benchmarks/
 ├── benchmarks/
@@ -487,8 +544,10 @@ sys-opt/
 │   ├── test_i18n.py        # zero-missing-keys guarantee across 10 languages
 │   ├── test_utils.py       # formatting helpers & safe subprocess
 │   ├── test_inspector.py   # live inspection + JSON regression guard
-│   ├── test_benchmark.py   # CPU/RAM/disk stress + JSON output
+│   ├── test_benchmark.py   # CPU/RAM/disk stress + JSON output + history
 │   ├── test_optimizer.py   # dry-run optimizer safety + profile filtering
+│   ├── test_report.py      # HTML report generation + before/after flow
+│   ├── test_filebench.py   # browser file-benchmark server + extension plan
 │   └── test_smoke.py       # end-to-end CLI flags (function-level, all OS)
 └── sys_opt/
     ├── __init__.py
@@ -496,6 +555,9 @@ sys-opt/
     ├── main.py             # CLI flags + interactive menu + locale detection
     ├── inspector.py        # hardware & OS inspection (zero-crash)
     ├── optimizer.py        # multi-OS optimization engine + profiles
+    ├── benchmark.py        # CPU/RAM/disk stress + compare + history
+    ├── report.py           # HTML performance report (--report, browser)
+    ├── filebench.py        # benchmark an uploaded file in the browser
     ├── utils.py            # safe subprocess / elevation / formatting
     └── i18n/
         ├── __init__.py
@@ -510,7 +572,7 @@ sys-opt/
 python -m unittest discover -s tests -v
 ```
 
-The suite (82 tests) asserts: identical key sets across all 10 languages, English fallback, formatting helpers, safe subprocess handling, live inspection on the current host, dry-run optimizer safety, profile-based step filtering, benchmark measurements with JSON output, a regression guard that JSON stays machine-parseable even with hostile values (embedded newlines / lines beyond 80 columns), and **function-level smoke tests** (`tests/test_smoke.py`) that run the real CLI entry points (`--inspect`, `--inspect --json`, `--optimize --dry-run`, `--optimize --dry-run --profile`, `--benchmark`, `--benchmark --json`, `--list-languages`, `--version`) end-to-end with captured output — executed on every OS of the CI matrix as the safety net for the whole CLI surface.
+The suite (103 tests) asserts: identical key sets across all 10 languages (221 keys each), English fallback, formatting helpers, safe subprocess handling, live inspection on the current host, dry-run optimizer safety, profile-based step filtering, benchmark measurements with JSON output, a regression guard that JSON stays machine-parseable even with hostile values (embedded newlines / lines beyond 80 columns), **HTML report generation** (`--report` — specs + before/after benchmark, escaping, file writing, browser opening), **browser file benchmarking** (`--benchmark-file` — extension detection, timed execution, timeout, the loopback HTTP server end-to-end via a real socket), and **function-level smoke tests** (`tests/test_smoke.py`) that run the real CLI entry points (`--inspect`, `--inspect --json`, `--optimize --dry-run`, `--optimize --dry-run --profile`, `--benchmark`, `--benchmark --json`, `--benchmark --report`, `--optimize --report`, `--benchmark-file`, `--list-languages`, `--version`) end-to-end with captured output — executed on every OS of the CI matrix as the safety net for the whole CLI surface.
 
 **CI (GitHub Actions):** every push / pull request runs `actionlint` (workflow syntax) + `flake8` lint plus the full test suite on a **complete OS × Python matrix** — Ubuntu 22.04/24.04 (x86_64) & 24.04 (arm64), macOS 15 (Intel) & 14 (Apple Silicon), Windows Server 2022 & 2025, across Python **3.8 → 3.14** — plus an independent **packaging job per OS** (Linux, macOS, Windows) that builds the sdist/wheel, validates with `twine check` and smoke-tests a clean install, so a packaging failure on one OS never hides the others — see [.github/workflows/ci.yml](.github/workflows/ci.yml). **Dependabot** ([.github/dependabot.yml](.github/dependabot.yml)) opens automatic weekly PRs to keep the pinned GitHub Actions tags and the Python dependencies (`rich`, `psutil`) up to date — every PR is validated by this same CI matrix before merge, and [dependabot-automerge.yml](.github/workflows/dependabot-automerge.yml) merges them automatically once the matrix is green (minor & patch updates; major updates wait for a human review).
 

@@ -303,6 +303,26 @@ def history(console, t, limit=None, as_json=False, base=None):
     return 0
 
 
+def measure():
+    """Run the full stress suite once; returns the raw results dict.
+
+    Shared by :func:`run` (table/JSON rendering) and the HTML report flow
+    (``report.run_*_report``), so the numbers are identical across modes.
+    """
+    start = time.perf_counter()
+    cpu_mops = _cpu_benchmark()
+    ram_mbps = _ram_benchmark()
+    write_mbps, read_mbps = _disk_benchmark()
+    elapsed = time.perf_counter() - start
+    return {
+        "cpu_mops": round(cpu_mops, 2),
+        "ram_mbps": round(ram_mbps, 1),
+        "disk_write_mbps": round(write_mbps, 1),
+        "disk_read_mbps": round(read_mbps, 1),
+        "elapsed_seconds": round(elapsed, 2),
+    }
+
+
 def _verdict(results):
     """Map results to a verdict i18n key (0=slow .. 3=great).
 
@@ -359,19 +379,12 @@ def run(console, t, as_json=False, compare=False, base=None, show_history=False,
         )
         console.print("[dim]%s[/]" % t("benchmark_running"))
 
-    start = time.perf_counter()
-    cpu_mops = _cpu_benchmark()
-    ram_mbps = _ram_benchmark()
-    write_mbps, read_mbps = _disk_benchmark()
-    elapsed = time.perf_counter() - start
-
-    results = {
-        "cpu_mops": round(cpu_mops, 2),
-        "ram_mbps": round(ram_mbps, 1),
-        "disk_write_mbps": round(write_mbps, 1),
-        "disk_read_mbps": round(read_mbps, 1),
-        "elapsed_seconds": round(elapsed, 2),
-    }
+    results = measure()
+    cpu_mops = results["cpu_mops"]
+    ram_mbps = results["ram_mbps"]
+    write_mbps = results["disk_write_mbps"]
+    read_mbps = results["disk_read_mbps"]
+    elapsed = results["elapsed_seconds"]
 
     if as_json:
         # Raw write (same rationale as inspector): bypass rich's rendering and

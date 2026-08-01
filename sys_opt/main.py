@@ -12,7 +12,7 @@ from .i18n.languages import (
     detect_system_language,
 )
 from .utils import arrow_menu, load_config, save_config
-from . import benchmark, inspector, optimizer
+from . import benchmark, filebench, inspector, optimizer, report
 
 
 def _ensure_utf8_output():
@@ -73,17 +73,23 @@ def _choose_language(console, t, title_key="lang_prompt"):
 
 
 def _main_menu(console, t):
-    """Arrow-key main menu; returns 0-6 or None (exit / cancel)."""
+    """Arrow-key main menu; returns the selected index or None (cancel).
+
+    The exit entry is always the last item, so callers detect it via the
+    returned item count rather than a hard-coded index.
+    """
     items = [
         "🔍 %s" % t("menu_inspect"),
         "🚀 %s" % t("menu_optimize"),
         "⚡ %s" % t("menu_suite"),
         "📊 %s" % t("menu_benchmark"),
+        "📁 %s" % t("menu_file_bench"),
         "💡 %s" % t("menu_suggest"),
         "🌐 %s" % t("menu_language"),
         "🚪 %s" % t("menu_exit"),
     ]
-    return arrow_menu(console, t("menu_title"), items, hint=t("menu_arrow_hint"))
+    index = arrow_menu(console, t("menu_title"), items, hint=t("menu_arrow_hint"))
+    return index, len(items)
 
 
 def _print_banner(console):
@@ -136,8 +142,8 @@ def _interactive(console, initial_language, first_run=False):
             _pause(console, t)
     while True:
         console.print()
-        index = _main_menu(console, t)
-        if index is None or index == 6:
+        index, item_count = _main_menu(console, t)
+        if index is None or index == item_count - 1:
             console.print()
             console.print("[bold green]%s[/]" % t("goodbye"))
             return 0
@@ -156,9 +162,12 @@ def _interactive(console, initial_language, first_run=False):
             benchmark.run(console, t)
             _pause(console, t)
         elif index == 4:
-            optimizer.suggest(console, t, profile=_choose_profile(console, t))
+            filebench.run(console, t)
             _pause(console, t)
         elif index == 5:
+            optimizer.suggest(console, t, profile=_choose_profile(console, t))
+            _pause(console, t)
+        elif index == 6:
             picked = _choose_language(console, t)
             if picked:
                 language = picked
@@ -197,6 +206,24 @@ def main(argv=None):
     parser.add_argument(
         "--history-limit", type=int, default=None, metavar="N",
         help="With --benchmark --history: show only the last N runs (default: all).",
+    )
+    parser.add_argument(
+        "--report", action="store_true",
+        help="With --benchmark/--optimize/--suite: write an HTML report with all system "
+        "specs + before/after benchmark results to ~/.sys-opt/reports and open it in "
+        "your browser (a complete benchmark runs automatically before and after "
+        "--optimize so the gain is measured).",
+    )
+    parser.add_argument(
+        "--benchmark-file", action="store_true",
+        help="Benchmark a file through the browser: starts a local server (127.0.0.1), "
+        "opens an upload page, recognizes the extension (.py/.c/.cpp/.exe/.sh/...), "
+        "executes it with a timeout and reports wall time, CPU time and exit code. "
+        "WARNING: sys-opt does NOT inspect the file content — only upload files you trust.",
+    )
+    parser.add_argument(
+        "--benchmark-file-port", type=int, default=8765, metavar="PORT",
+        help="Port for --benchmark-file (default: 8765).",
     )
     parser.add_argument("--dry-run", action="store_true", help="Show optimization steps without executing them.")
     parser.add_argument("--force", action="store_true", help="Skip the elevation confirmation prompt.")
@@ -239,17 +266,33 @@ def main(argv=None):
         _print_languages(console)
         return 0
     rtl = LANGUAGES.get(language, {}).get("dir") == "rtl"
+    if args.benchmark_file:
+        return filebench.run(console, t, port=args.benchmark_file_port)
     if args.inspect:
         inspector.run(console, t, as_json=args.json, rtl=rtl)
         return 0
     if args.suggest:
         return optimizer.suggest(console, t, dry_run=args.dry_run, force=args.force, profile=args.profile)
     if args.optimize:
+        if args.report:
+            return report.run_optimize_report(
+                console, t, dry_run=args.dry_run, force=args.force,
+                profile=args.profile, language=language, rtl=rtl,
+            )
         return optimizer.run(console, t, dry_run=args.dry_run, force=args.force, profile=args.profile)
     if args.suite:
         inspector.run(console, t, as_json=args.json, rtl=rtl)
+        if args.report:
+            return report.run_optimize_report(
+                console, t, dry_run=args.dry_run, force=args.force,
+                profile=args.profile, language=language, rtl=rtl,
+            )
         return optimizer.run(console, t, dry_run=args.dry_run, force=args.force, profile=args.profile)
     if args.benchmark:
+        if args.report and not args.json:
+            return report.run_benchmark_report(
+                console, t, language=language, rtl=rtl,
+            )
         return benchmark.run(
             console, t,
             as_json=args.json, compare=args.compare,
@@ -259,7 +302,8 @@ def main(argv=None):
     if not sys.stdin.isatty():
         _print_languages(console)
         console.print(
-            "[dim]Non-interactive terminal: pass --inspect, --optimize, --suite, --benchmark or --list-languages.[/]"
+            "[dim]Non-interactive terminal: pass --inspect, --optimize, --suite, --benchmark, "
+            "--benchmark-file, --report or --list-languages.[/]"
         )
         return 0
 
