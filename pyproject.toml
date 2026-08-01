@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=77"]  # >=77 for PEP 639 SPDX license expression support
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -14,7 +14,6 @@ classifiers = [
     "Environment :: Console",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
     "Topic :: System :: Hardware",
     "Topic :: System :: Systems Administration",
 ]
