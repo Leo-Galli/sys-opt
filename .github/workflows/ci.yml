@@ -28,18 +28,26 @@ jobs:
   # Lint — OS-independent, run once on the newest LTS runner
   # ------------------------------------------------------------------ #
   lint:
-    name: Lint (flake8)
+    name: Lint (flake8 + actionlint)
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      # Fails fast: needs only the repo, so run it BEFORE any Python/uv
+      # setup. Validates the YAML syntax AND the ${{ }} expressions of
+      # every .github/workflows/*.yml in ~1s, so a broken workflow is
+      # caught before the 44 parallel jobs (lint + 40 test + 3 package)
+      # finish. Also runs shellcheck on the run: scripts (preinstalled
+      # on Ubuntu runners).
+      - name: Validate workflow syntax
+        uses: rhysd/actionlint@v1
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - name: Lint
+      - name: Lint Python code
         run: uvx flake8 sys_opt tests
 
   # ------------------------------------------------------------------ #
@@ -75,13 +83,13 @@ jobs:
           - { os: ubuntu-24.04-arm, python-version: "3.13" }
           - { os: ubuntu-24.04-arm, python-version: "3.14" }
           # ---------- macOS ----------
-          # macOS 13 (Intel x86_64)
-          - { os: macos-13, python-version: "3.8" }
-          - { os: macos-13, python-version: "3.9" }
-          - { os: macos-13, python-version: "3.10" }
-          - { os: macos-13, python-version: "3.11" }
-          - { os: macos-13, python-version: "3.12" }
-          - { os: macos-13, python-version: "3.13" }
+          # macOS 15 Intel (x86_64)
+          - { os: macos-15-intel, python-version: "3.8" }
+          - { os: macos-15-intel, python-version: "3.9" }
+          - { os: macos-15-intel, python-version: "3.10" }
+          - { os: macos-15-intel, python-version: "3.11" }
+          - { os: macos-15-intel, python-version: "3.12" }
+          - { os: macos-15-intel, python-version: "3.13" }
           # macOS 14 (Apple Silicon arm64)
           - { os: macos-14, python-version: "3.9" }
           - { os: macos-14, python-version: "3.10" }
@@ -90,11 +98,11 @@ jobs:
           - { os: macos-14, python-version: "3.13" }
           - { os: macos-14, python-version: "3.14" }
           # ---------- Windows ----------
-          # Windows Server 2019
-          - { os: windows-2019, python-version: "3.8" }
-          - { os: windows-2019, python-version: "3.9" }
-          - { os: windows-2019, python-version: "3.10" }
-          - { os: windows-2019, python-version: "3.11" }
+          # Windows Server 2025
+          - { os: windows-2025, python-version: "3.8" }
+          - { os: windows-2025, python-version: "3.9" }
+          - { os: windows-2025, python-version: "3.10" }
+          - { os: windows-2025, python-version: "3.11" }
           # Windows Server 2022 — all supported Pythons
           - { os: windows-2022, python-version: "3.8" }
           - { os: windows-2022, python-version: "3.9" }
