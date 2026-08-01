@@ -83,6 +83,8 @@
 
 **🎯 Optimization profiles** — pick the kind of tune-up you want: Full, Gaming, AI/ML, Studio/Work, or Cleanup-only.
 
+**📊 Performance benchmark** — lightweight CPU / RAM / disk stress tests (psutil-backed) with a comparative trend table, perfect for measuring the effect of your optimization.
+
 **🌐 i18n engine** — 10 complete languages, **zero missing keys** (enforced by tests), automatic locale detection, on-the-fly switching, RTL-aware layout for Arabic.
 
 **🛡️ Zero-crash policy** — every hardware query and OS command is wrapped in `try/except`; unreadable attributes degrade gracefully to `N/A` / `Access Denied` instead of crashing.
@@ -230,13 +232,12 @@ python -m sys_opt        # or just: sys-opt  (after pip install)
  ███████╗ ╚████╔╝ ███████╗     ██║   ██║██║   ██║   ██║
  ╚════██║  ╚██╔╝  ╚════██║     ██║   ██║██║   ██║   ██║
  ███████║   ██║   ███████║     ╚██████╔╝╚██████╔╝   ██║
- ╚══════╝   ╚═╝   ╚══════╝      ╚═════╝  ╚═════╝    ╚═╝
-
-[1] 🔍 Inspect System Specs
-[2] 🚀 Run System Optimization
-[3] ⚡ Full Suite
-[4] 🌐 Change Language
-[0] 🚪 Exit
+ ╚══════╝   ╚═╝   ╚══════╝      ╚═════╝  ╚═════╝    ╚═╝ [1] 🔍 Inspect System Specs
+ [2] 🚀 Run System Optimization
+ [3] ⚡ Full Suite
+ [4] 📊 Run Performance Benchmark
+ [5] 🌐 Change Language
+ [0] 🚪 Exit
 ```
 
 ### Non-interactive flags
@@ -250,6 +251,8 @@ python -m sys_opt        # or just: sys-opt  (after pip install)
 | `python -m sys_opt --optimize --force` | Skip the elevation confirmation prompt |
 | `python -m sys_opt --optimize --profile gaming` | Run a specific profile (see below) |
 | `python -m sys_opt --suite` | Inspect **then** optimize |
+| `python -m sys_opt --benchmark` | Run a light CPU / RAM / disk benchmark with a comparative table |
+| `python -m sys_opt --benchmark --json` | Emit benchmark results as JSON (scripting) |
 | `python -m sys_opt --language it --inspect` | Force a specific language (`it`, `en`, `es`, `fr`, `de`, `pt`, `ru`, `zh`, `ja`, `ar`) |
 | `python -m sys_opt --list-languages` | List all supported languages |
 | `python -m sys_opt --version` | Show the version |
@@ -271,6 +274,24 @@ python -m sys_opt --optimize --profile gaming
 python -m sys_opt --suite --profile studio
 python -m sys_opt --optimize --profile ai --dry-run
 ```
+
+### 📊 Performance benchmark
+
+Runs a short, lightweight stress test and shows a comparative table — run it **before** optimizing to get a baseline, then again **after** to see the improvement:
+
+```bash
+python -m sys_opt --benchmark
+python -m sys_opt --benchmark --json
+```
+
+| Measured | What it tests |
+|---|---|
+| CPU | Floating-point compute loop → millions of operations/sec (`M ops/s`) |
+| RAM | Repeated buffer copies → memory bandwidth (`MB/s`) |
+| Disk (write) | Writes a temp file with `fsync` → write speed (`MB/s`) |
+| Disk (read) | Reads the temp file back → read speed (`MB/s`) |
+
+Each row also shows a relative **trend bar** comparing it against the fastest measured component. All tests are zero-crash and clean up their temp files automatically.
 
 ### 🔐 Elevation
 
@@ -350,7 +371,7 @@ sys-opt/
 python -m unittest discover -s tests -v
 ```
 
-The suite (20 tests) asserts: identical key sets across all 10 languages, English fallback, formatting helpers, safe subprocess handling, live inspection on the current host, dry-run optimizer safety, and profile-based step filtering.
+The suite (26 tests) asserts: identical key sets across all 10 languages, English fallback, formatting helpers, safe subprocess handling, live inspection on the current host, dry-run optimizer safety, profile-based step filtering, and benchmark measurements with JSON output.
 
 ---
 

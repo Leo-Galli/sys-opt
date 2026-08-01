@@ -11,7 +11,7 @@ from .i18n.languages import (
     build_translator,
     detect_system_language,
 )
-from . import inspector, optimizer
+from . import benchmark, inspector, optimizer
 
 
 def _ensure_utf8_output():
@@ -90,7 +90,8 @@ def _main_menu(console, t):
     table.add_row("[bold cyan][1][/] 🔍 %s" % t("menu_inspect"))
     table.add_row("[bold cyan][2][/] 🚀 %s" % t("menu_optimize"))
     table.add_row("[bold cyan][3][/] ⚡ %s" % t("menu_suite"))
-    table.add_row("[bold cyan][4][/] 🌐 %s" % t("menu_language"))
+    table.add_row("[bold cyan][4][/] 📊 %s" % t("menu_benchmark"))
+    table.add_row("[bold cyan][5][/] 🌐 %s" % t("menu_language"))
     table.add_row("[bold cyan][0][/] 🚪 %s" % t("menu_exit"))
     console.print(
         Panel(
@@ -151,7 +152,7 @@ def _interactive(console, initial_language):
         _main_menu(console, t)
         try:
             choice = Prompt.ask(
-                t("menu_prompt"), choices=["0", "1", "2", "3", "4"], default="0", show_default=False
+                t("menu_prompt"), choices=["0", "1", "2", "3", "4", "5"], default="0", show_default=False
             )
         except Exception:
             choice = "0"
@@ -167,6 +168,9 @@ def _interactive(console, initial_language):
             optimizer.run(console, t, profile=profile)
             _pause(console, t)
         elif choice == "4":
+            benchmark.run(console, t)
+            _pause(console, t)
+        elif choice == "5":
             language = _choose_language(console, t)
             t = build_translator(language)
             console.print(
@@ -189,6 +193,7 @@ def main(argv=None):
     parser.add_argument("--inspect", action="store_true", help="Inspect hardware specs and exit.")
     parser.add_argument("--optimize", action="store_true", help="Run system optimization and exit.")
     parser.add_argument("--suite", action="store_true", help="Inspect then optimize, then exit.")
+    parser.add_argument("--benchmark", action="store_true", help="Run a light CPU/RAM/disk benchmark and exit.")
     parser.add_argument("--dry-run", action="store_true", help="Show optimization steps without executing them.")
     parser.add_argument("--force", action="store_true", help="Skip the elevation confirmation prompt.")
     parser.add_argument(
@@ -231,11 +236,13 @@ def main(argv=None):
     if args.suite:
         inspector.run(console, t, as_json=args.json, rtl=rtl)
         return optimizer.run(console, t, dry_run=args.dry_run, force=args.force, profile=args.profile)
+    if args.benchmark:
+        return benchmark.run(console, t, as_json=args.json)
 
     if not sys.stdin.isatty():
         _print_languages(console)
         console.print(
-            "[dim]Non-interactive terminal: pass --inspect, --optimize, --suite or --list-languages.[/]"
+            "[dim]Non-interactive terminal: pass --inspect, --optimize, --suite, --benchmark or --list-languages.[/]"
         )
         return 0
 
