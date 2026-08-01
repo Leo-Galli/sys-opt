@@ -26,6 +26,16 @@ def _ensure_utf8_output():
             pass
 
 
+_SYS_OPT_BANNER = (
+    " ███████╗██╗   ██╗███████╗      ██████╗ ██████╗ ████████╗"
+    "\n ██╔════╝╚██╗ ██╔╝██╔════╝     ██╔═══██╗██╔═══██╗╚══██╔══╝"
+    "\n ███████╗ ╚████╔╝ ███████╗     ██║   ██║██║   ██║   ██║"
+    "\n ╚════██║  ╚██╔╝  ╚════██║     ██║   ██║██║   ██║   ██║"
+    "\n ███████║   ██║   ███████║     ╚██████╔╝╚██████╔╝   ██║"
+    "\n ╚══════╝   ╚═╝   ╚══════╝      ╚═════╝  ╚═════╝    ╚═╝"
+)
+
+
 def _make_console():
     from rich.console import Console
 
@@ -92,6 +102,14 @@ def _main_menu(console, t):
     )
 
 
+def _print_banner(console):
+    """Print the ASCII-art brand banner (language-independent)."""
+    from rich.panel import Panel
+    from rich.text import Text
+
+    console.print(Panel(Text(_SYS_OPT_BANNER, style="bold cyan"), border_style="cyan"))
+
+
 def _pause(console, t):
     try:
         console.input(t("press_enter"))
@@ -104,6 +122,8 @@ def _interactive(console, initial_language):
 
     language = initial_language
     t = build_translator(language)
+    console.print()
+    _print_banner(console)
     while True:
         console.print()
         _main_menu(console, t)
