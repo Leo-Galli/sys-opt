@@ -6,6 +6,42 @@
 
 ---
 
+## 🔗 GitHub & Quick Start
+
+**Repository:** [github.com/Leo-Galli/sys-opt](https://github.com/Leo-Galli/sys-opt)
+
+```bash
+# 1. Clone
+$ git clone https://github.com/Leo-Galli/sys-opt.git
+$ cd sys-opt
+
+# 2. Install dependencies
+$ pip install -r requirements.txt
+
+# 3. Run it!
+$ python -m sys_opt
+```
+
+Or install the package directly from GitHub (adds the `sys-opt` command to your PATH):
+
+```bash
+$ pip install git+https://github.com/Leo-Galli/sys-opt.git
+$ sys-opt --inspect
+```
+
+### 🇮🇹 Guida rapida
+
+```bash
+git clone https://github.com/Leo-Galli/sys-opt.git
+cd sys-opt
+pip install -r requirements.txt
+python -m sys_opt                 # apri il menu interattivo
+python -m sys_opt --optimize      # ottimizza il sistema (da Amministratore / sudo)
+python -m sys_opt --inspect       # mostra le specifiche hardware
+```
+
+---
+
 ## ✨ Features
 
 - **🔍 Hardware & OS Inspector** — clean, rich-formatted tables:
@@ -43,11 +79,36 @@
 
 ## 📦 Installation
 
-Requires **Python 3.8+**.
+Requires **Python 3.8+**. Pick one of the three options below.
+
+### Option A — Install directly from GitHub (recommended)
 
 ```bash
+pip install git+https://github.com/Leo-Galli/sys-opt.git
+```
+
+This installs the package **and** adds the `sys-opt` command to your PATH:
+
+```bash
+sys-opt                 # interactive menu
+sys-opt --inspect       # hardware report
+sys-opt --optimize      # system optimization (elevation required)
+```
+
+### Option B — Clone & run from source
+
+```bash
+git clone https://github.com/Leo-Galli/sys-opt.git
+cd sys-opt
 pip install -r requirements.txt
-# or, install the package itself (adds the `sys-opt` command):
+python -m sys_opt
+```
+
+### Option C — Editable install (for development)
+
+```bash
+git clone https://github.com/Leo-Galli/sys-opt.git
+cd sys-opt
 pip install -e .
 ```
 
@@ -65,6 +126,28 @@ python -m sys_opt        # or just: sys-opt
 [3] ⚡ Full Suite
 [4] 🌐 Change Language
 [0] 🚪 Exit
+```
+
+### ▶️ Example session
+
+```bash
+$ python -m sys_opt
+
+[1] 🔍 Inspect System Specs
+[2] 🚀 Run System Optimization
+[3] ⚡ Full Suite
+[4] 🌐 Change Language
+[0] 🚪 Exit
+Select an action [0-4]: 1
+
+┌──────────────────────────────────────────────┐
+│ System Inspection                            │
+└──────────────────────────────────────────────┘
+Operating System & Kernel   Windows 11 · 10.0.26200 · AMD64
+CPU                         6 cores / 12 threads
+Memory (RAM)                13.74 GiB total · 5600 MHz
+Graphics (GPU)              NVIDIA GeForce ...
+Storage                     NVMe 512 GB · 1.23 TiB free
 ```
 
 Non-interactive flags:
