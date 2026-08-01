@@ -235,6 +235,107 @@ class TestOptimizer(unittest.TestCase):
                 self.fail("detector %s raised: %s" % (fn.__name__, exc))
             self.assertIn(status, ("ready", "applied", "needs_elevation", "not_applicable"))
 
+    def test_classify_result_buckets(self):
+        """The summary bucket logic covers every status x detected combination."""
+        from sys_opt.optimizer import _classify_result
+
+        cases = [
+            # (status, detected, expected bucket)
+            ("ok", "ready", "applied"),
+            ("ok", "needs_elevation", "applied"),
+            ("ok", "applied", "already"),
+            ("ok", "not_applicable", "unsupported"),
+            ("skipped", "applied", "already"),
+            ("skipped", "not_applicable", "unsupported"),
+            ("skipped", "needs_elevation", "needs_elevation"),
+            ("skipped", "ready", "skipped"),
+            ("skipped_no_elev", "ready", "needs_elevation"),
+            ("skipped_no_elev", "applied", "already"),
+            ("failed", "ready", "failed"),
+            # failed always wins: a red FAILED is never hidden under "already"
+            ("failed", "applied", "failed"),
+            ("failed", "not_applicable", "failed"),
+        ]
+        for status, detected, expected in cases:
+            self.assertEqual(
+                _classify_result(status, detected), expected,
+                "(%s, %s) should be %s" % (status, detected, expected),
+            )
+
+    def test_final_summary_verdict_and_buckets(self):
+        """--optimize must end with a verdict panel: applied vs skipped + reason."""
+        from sys_opt.optimizer import run
+
+        t = build_translator("en")
+        calls = []
+
+        def ok_step(_t, _elevated, _dry_run):
+            calls.append("ok")
+            return "ok", "detail"
+
+        def fail_step(_t, _elevated, _dry_run):
+            calls.append("fail")
+            return "failed", "detail"
+
+        def elev_step(_t, _elevated, _dry_run):
+            calls.append("elev")
+            return "skipped_no_elev", "detail"
+
+        steps = [("one", ok_step), ("two", fail_step), ("three", elev_step)]
+        with mock.patch("sys_opt.optimizer.build_steps", return_value=steps):
+            with mock.patch(
+                "sys_opt.optimizer._DETECT_STEPS",
+                {
+                    ok_step: lambda _e: ("ready", ""),
+                    fail_step: lambda _e: ("ready", ""),
+                    elev_step: lambda _e: ("ready", ""),
+                },
+            ):
+                with mock.patch("sys_opt.optimizer.is_admin", return_value=True):
+                    buffer, console = _string_console()
+                    code = run(console, t, dry_run=False)
+        out = buffer.getvalue()
+        self.assertEqual(code, 1)  # one failed step
+        self.assertEqual(sorted(calls), ["elev", "fail", "ok"])
+        # verdict counts the 3 actionable steps, 1 applied
+        self.assertIn("1 of 3 possible optimizations applied", out)
+        self.assertIn(t("summary_applied"), out)
+        self.assertIn(t("summary_failed"), out)
+        self.assertIn(t("summary_needs_elevation"), out)
+
+    def test_final_summary_nothing_to_do(self):
+        """When every step is already applied, the verdict says nothing to do."""
+        from sys_opt.optimizer import run
+
+        t = build_translator("en")
+
+        def ok_step(_t, _elevated, _dry_run):
+            return "ok", "detail"
+
+        with mock.patch("sys_opt.optimizer.build_steps", return_value=[("one", ok_step)]):
+            with mock.patch(
+                "sys_opt.optimizer._DETECT_STEPS", {ok_step: lambda _e: ("applied", "0 files")}
+            ):
+                with mock.patch("sys_opt.optimizer.is_admin", return_value=True):
+                    buffer, console = _string_console()
+                    code = run(console, t, dry_run=False)
+        out = buffer.getvalue()
+        self.assertEqual(code, 0)
+        self.assertIn(t("summary_nothing"), out)
+        # the 'nothing to do' panel replaces the verdict line entirely
+        self.assertNotIn("possible optimizations applied", out)
+
+    def test_final_summary_verdict_string_has_two_placeholders(self):
+        """Every language's summary_verdict must carry exactly two %d slots."""
+        from sys_opt.i18n.languages import LANGUAGES
+
+        for code, meta in LANGUAGES.items():
+            value = meta["strings"]["summary_verdict"]
+            self.assertEqual(
+                value.count("%d"), 2,
+                "[%s] summary_verdict must have 2 placeholders: %r" % (code, value),
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

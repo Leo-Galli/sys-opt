@@ -297,6 +297,39 @@ python -m sys_opt --suite --profile studio
 python -m sys_opt --optimize --profile ai --dry-run
 ```
 
+### 🏁 What you get after a run
+
+Every `--optimize` run (and every confirmed `--suggest`) ends with a **final summary panel** that shows exactly what happened, with a reason for every skipped step:
+
+```
+┌─ Optimization complete ──────────────────────────┐
+│ 3 of 5 possible optimizations applied            │
+│                                                  │
+│ ✅ Applied: 3                                     │
+│    • GPU scheduling (HAGS)                        │
+│    • Game DVR recording off                       │
+│    • High Performance power plan                  │
+│ ⏭ Already active: 1                              │
+│    • DNS cache flush                              │
+│ 🚫 Not supported: 1                               │
+│    • Update cache                                 │
+└──────────────────────────────────────────────────┘
+```
+
+How the verdict is computed: the tool **inspects your system read-only** (same detectors as `--suggest`) to know which steps had something to do, then counts how many of those actually applied. Every skipped step is bucketed with its reason:
+
+| Bucket | Meaning |
+|---|---|
+| ✅ **Applied** | The step ran successfully |
+| ⏭ **Already active** | The system was already in the desired state (e.g. High Performance power plan already on) |
+| 🚫 **Not supported** | The service / directory / package manager doesn't exist on this machine |
+| ⚠ **Needs elevation** | Skipped because admin/root rights are missing (`skipped_no_elev`) |
+| ❌ **Failed** | The step errored (details shown above the panel) |
+| · **Skipped** | Skipped for another reason |
+
+- The verdict line is colored: 🟢 green when everything possible was applied, 🟡 yellow when some were skipped, 🔴 red when nothing was applied.
+- If there was **nothing to do** at all (every step already optimal), the panel says so instead of printing `0 of 0`.
+
 ### 💡 Suggest mode (`--optimize --suggest`)
 
 Instead of blindly running every step, **suggest** first *inspects* your system and proposes only the optimizations that would actually help — ranked by **estimated FPS/performance impact** (★ low → ★★★★★ high) for the selected profile. It then waits for your confirmation before touching anything:
@@ -443,7 +476,7 @@ sys-opt/
 python -m unittest discover -s tests -v
 ```
 
-The suite (67 tests) asserts: identical key sets across all 10 languages, English fallback, formatting helpers, safe subprocess handling, live inspection on the current host, dry-run optimizer safety, profile-based step filtering, benchmark measurements with JSON output, a regression guard that JSON stays machine-parseable even with hostile values (embedded newlines / lines beyond 80 columns), and **function-level smoke tests** (`tests/test_smoke.py`) that run the real CLI entry points (`--inspect`, `--inspect --json`, `--optimize --dry-run`, `--optimize --dry-run --profile`, `--benchmark`, `--benchmark --json`, `--list-languages`, `--version`) end-to-end with captured output — executed on every OS of the CI matrix as the safety net for the whole CLI surface.
+The suite (71 tests) asserts: identical key sets across all 10 languages, English fallback, formatting helpers, safe subprocess handling, live inspection on the current host, dry-run optimizer safety, profile-based step filtering, benchmark measurements with JSON output, a regression guard that JSON stays machine-parseable even with hostile values (embedded newlines / lines beyond 80 columns), and **function-level smoke tests** (`tests/test_smoke.py`) that run the real CLI entry points (`--inspect`, `--inspect --json`, `--optimize --dry-run`, `--optimize --dry-run --profile`, `--benchmark`, `--benchmark --json`, `--list-languages`, `--version`) end-to-end with captured output — executed on every OS of the CI matrix as the safety net for the whole CLI surface.
 
 **CI (GitHub Actions):** every push / pull request runs `actionlint` (workflow syntax) + `flake8` lint plus the full test suite on a **complete OS × Python matrix** — Ubuntu 22.04/24.04 (x86_64) & 24.04 (arm64), macOS 15 (Intel) & 14 (Apple Silicon), Windows Server 2022 & 2025, across Python **3.8 → 3.14** — plus an independent **packaging job per OS** (Linux, macOS, Windows) that builds the sdist/wheel, validates with `twine check` and smoke-tests a clean install, so a packaging failure on one OS never hides the others — see [.github/workflows/ci.yml](.github/workflows/ci.yml). **Dependabot** ([.github/dependabot.yml](.github/dependabot.yml)) opens automatic weekly PRs to keep the pinned GitHub Actions tags and the Python dependencies (`rich`, `psutil`) up to date — every PR is validated by this same CI matrix before merge, and [dependabot-automerge.yml](.github/workflows/dependabot-automerge.yml) merges them automatically once the matrix is green (minor & patch updates; major updates wait for a human review).
 

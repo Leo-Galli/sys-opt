@@ -474,6 +474,104 @@ _SUGGEST_STATUS_COLORS = {
 
 
 # --------------------------------------------------------------------------- #
+# Final summary: what was applied vs skipped, with a reason per bucket
+# --------------------------------------------------------------------------- #
+
+#: classify a step result into a summary bucket.
+#: ``detected`` is the read-only pre-run state (ready/applied/needs_elevation/
+#: not_applicable) from _DETECT_STEPS; ``status`` is the actual run result.
+_SUMMARY_KEYS = {
+    "applied": "summary_applied",
+    "already": "summary_already",
+    "unsupported": "summary_unsupported",
+    "needs_elevation": "summary_needs_elevation",
+    "failed": "summary_failed",
+    "skipped": "summary_skipped",
+}
+
+_SUMMARY_COLORS = {
+    "applied": "green",
+    "already": "dim",
+    "unsupported": "dim",
+    "needs_elevation": "yellow",
+    "failed": "red",
+    "skipped": "dim",
+}
+
+_SUMMARY_MARKS = {
+    "applied": "✅",
+    "already": "⏭",
+    "unsupported": "🚫",
+    "needs_elevation": "⚠",
+    "failed": "❌",
+    "skipped": "·",
+}
+
+
+def _classify_result(status, detected):
+    """Map a step's run status + detected state to a summary bucket.
+
+    ``failed`` always wins so a red FAILED is never hidden under "already":
+    a step that errored must surface as a failure in the panel even when the
+    system was already in the desired state.
+    """
+    if status == "failed":
+        return "failed"
+    if detected == "not_applicable":
+        return "unsupported"
+    if detected == "applied":
+        return "already"
+    if status == "ok":
+        return "applied"
+    if status == "skipped_no_elev" or detected == "needs_elevation":
+        return "needs_elevation"
+    return "skipped"
+
+
+def _print_final_summary(console, t, results, detected):
+    """Render the final 'applied vs skipped' panel with a verdict.
+
+    ``results`` is a list of (label, status, detail); ``detected`` maps each
+    label to its read-only pre-run state. The verdict counts how many of the
+    steps that had something to do (ready / needs_elevation) actually applied
+    (status ok).
+    """
+    buckets = {
+        "applied": [], "already": [], "unsupported": [],
+        "needs_elevation": [], "failed": [], "skipped": [],
+    }
+    possible = 0
+    for label, status, _detail in results:
+        dstate = detected.get(label, "ready")
+        if dstate in ("ready", "needs_elevation"):
+            possible += 1
+        buckets[_classify_result(status, dstate)].append(label)
+    applied = len(buckets["applied"])
+    console.print()
+    if possible == 0:
+        console.print(
+            Panel("[bold green]✓ %s[/]" % t("summary_nothing"), title=t("optimize_summary"), border_style="green")
+        )
+        return
+    if applied == possible:
+        verdict_color = "green"
+    elif applied > 0:
+        verdict_color = "yellow"
+    else:
+        verdict_color = "red"
+    lines = ["[bold %s]%s[/]" % (verdict_color, t("summary_verdict") % (applied, possible))]
+    for bucket in ("applied", "already", "unsupported", "needs_elevation", "failed", "skipped"):
+        labels = buckets[bucket]
+        if not labels:
+            continue
+        color = _SUMMARY_COLORS[bucket]
+        lines.append("[%s]%s %s: %d[/]" % (color, _SUMMARY_MARKS[bucket], t(_SUMMARY_KEYS[bucket]), len(labels)))
+        for name in labels:
+            lines.append("    [dim]%s[/]" % name)
+    console.print(Panel("\n".join(lines), title=t("optimize_summary"), border_style="green"))
+
+
+# --------------------------------------------------------------------------- #
 # Step assembly + runner
 # --------------------------------------------------------------------------- #
 #: Optimization profiles (order used by the interactive chooser).
@@ -599,9 +697,26 @@ def run(console, t, dry_run=False, force=False, profile="all"):
         )
     )
 
+    steps = build_steps(t, elevated, dry_run, profile=profile)
+
+    # Read-only pre-run detection: explains WHY a step was skipped. This runs
+    # even in dry-run on purpose — the detectors are read-only, timeout-bounded
+    # and power the final summary panel, so --optimize --dry-run reports what
+    # would happen with the same accuracy as a real run.
+    detected = {}
+    for label, step in steps:
+        detect = _DETECT_STEPS.get(step)
+        if detect is None:
+            detected[label] = "ready"
+        else:
+            try:
+                detected[label] = detect(elevated)[0]
+            except Exception:  # zero-crash policy
+                detected[label] = "ready"
+
     results = []
     gpu_sched_ok = False
-    for label, step in build_steps(t, elevated, dry_run, profile=profile):
+    for label, step in steps:
         try:
             if not dry_run:
                 with console.status("[bold]%s[/] ..." % label):
@@ -622,16 +737,8 @@ def run(console, t, dry_run=False, force=False, profile="all"):
         if detail and detail != t("na"):
             console.print("      [dim]%s[/]" % detail)
 
-    ok_count = sum(1 for _label, status, _detail in results if status == "ok")
+    _print_final_summary(console, t, results, detected)
     failed_count = sum(1 for _label, status, _detail in results if status == "failed")
-    console.print()
-    console.print(
-        Panel(
-            "[bold green]%s[/]  -  [green]%d %s[/]   [red]%d %s[/]"
-            % (t("optimize_summary"), ok_count, t("status_ok"), failed_count, t("status_failed")),
-            border_style="green",
-        )
-    )
     if gpu_sched_ok:
         console.print()
         console.print("[bold yellow]⚠ %s[/]" % t("reboot_required"))
@@ -782,14 +889,6 @@ def suggest(console, t, profile="all", dry_run=False, force=False):
         if detail and detail != t("na"):
             console.print("      [dim]%s[/]" % detail)
 
-    ok_count = sum(1 for _label, status, _detail in results if status == "ok")
+    _print_final_summary(console, t, results, {row["label"]: row["status"] for row in selected})
     failed_count = sum(1 for _label, status, _detail in results if status == "failed")
-    console.print()
-    console.print(
-        Panel(
-            "[bold green]%s[/]  -  [green]%d %s[/]   [red]%d %s[/]"
-            % (t("optimize_summary"), ok_count, t("status_ok"), failed_count, t("status_failed")),
-            border_style="green",
-        )
-    )
     return 0 if failed_count == 0 else 1
