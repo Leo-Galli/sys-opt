@@ -169,6 +169,38 @@ class TestCliSmoke(unittest.TestCase):
                 self.assertEqual(len(reports), 1)
                 self.assertIn("before", reports[0].read_text(encoding="utf-8").lower())
 
+    def test_update_flag_wired(self):
+        """--update checks PyPI (mocked) and installs when a newer release
+        exists; the flag dispatches to the update module end-to-end."""
+        with tempfile.TemporaryDirectory() as base, \
+                mock.patch("sys_opt.update.latest_pypi_version", return_value="99.0.0"), \
+                mock.patch("sys_opt.update.run_cmd", return_value=(0, "", "")):
+            with mock.patch("sys_opt.update.config_path",
+                            return_value=Path(base) / "config.json"), \
+                    mock.patch("sys_opt.update.config_dir", return_value=Path(base)):
+                code, output = run_cli(["--update", "--language", "en"])
+        self.assertEqual(code, 0)
+        self.assertIn("Updated to 99.0.0", output)
+
+    def test_update_flag_up_to_date(self):
+        """--update when already on the latest release exits 0 quietly."""
+        from sys_opt import __version__
+
+        with tempfile.TemporaryDirectory() as base, \
+                mock.patch("sys_opt.update.latest_pypi_version", return_value=__version__):
+            with mock.patch("sys_opt.update.config_path",
+                            return_value=Path(base) / "config.json"), \
+                    mock.patch("sys_opt.update.config_dir", return_value=Path(base)):
+                code, output = run_cli(["--update", "--language", "en"])
+        self.assertEqual(code, 0)
+        self.assertIn("up to date", output)
+
+    def test_no_update_check_flag_parses(self):
+        """--no-update-check is accepted and does not break other flags."""
+        code, output = run_cli(["--inspect", "--no-update-check", "--language", "en"])
+        self.assertEqual(code, 0)
+        self.assertIn("System Inspection", output)
+
     def test_unsupported_language_flag_falls_back(self):
         """An unknown --language must not crash; it detects/falls back.
 

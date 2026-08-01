@@ -12,7 +12,7 @@ from .i18n.languages import (
     detect_system_language,
 )
 from .utils import arrow_menu, load_config, save_config
-from . import benchmark, filebench, inspector, optimizer, report
+from . import benchmark, filebench, inspector, optimizer, report, update
 
 
 def _ensure_utf8_output():
@@ -124,7 +124,7 @@ def _print_language_saved(console, t, language):
     )
 
 
-def _interactive(console, initial_language, first_run=False):
+def _interactive(console, initial_language, first_run=False, check_update=True):
     language = initial_language
     t = build_translator(language)
     console.print()
@@ -140,6 +140,8 @@ def _interactive(console, initial_language, first_run=False):
             console.print()
             _print_language_saved(console, t, language)
             _pause(console, t)
+    if check_update:
+        update.maybe_prompt(console, t)
     while True:
         console.print()
         index, item_count = _main_menu(console, t)
@@ -237,6 +239,14 @@ def main(argv=None):
     )
     parser.add_argument("--list-languages", action="store_true", help="List supported languages and exit.")
     parser.add_argument("--json", action="store_true", help="Emit inspection results as JSON.")
+    parser.add_argument(
+        "--update", action="store_true",
+        help="Check PyPI for a newer sys-opt release and install it (no prompt), then exit.",
+    )
+    parser.add_argument(
+        "--no-update-check", action="store_true",
+        help="Skip the automatic update check at startup (interactive mode only).",
+    )
     parser.add_argument("--version", action="version", version="%(prog)s " + __version__)
     args = parser.parse_args(argv)
 
@@ -265,6 +275,8 @@ def main(argv=None):
     if args.list_languages:
         _print_languages(console)
         return 0
+    if args.update:
+        return update.run_update_cli(console, t)
     rtl = LANGUAGES.get(language, {}).get("dir") == "rtl"
     if args.benchmark_file:
         return filebench.run(console, t, port=args.benchmark_file_port)
@@ -312,7 +324,11 @@ def main(argv=None):
         "[dim]%s: %s %s[/]" % (t(label_key), LANGUAGES[language]["flag"], LANGUAGES[language]["native"])
     )
     first_run = saved not in LANGUAGES and args.language not in LANGUAGES
-    return _interactive(console, language, first_run=first_run)
+    return _interactive(
+        console, language,
+        first_run=first_run,
+        check_update=not args.no_update_check,
+    )
 
 
 if __name__ == "__main__":

@@ -46,6 +46,8 @@
   - [🐧 Linux](#-linux)
   - [🍎 macOS](#-macos)
   - [🪟 Windows](#-windows)
+- [🔄 Updating sys-opt](#-updating-sys-opt)
+- [🗑️ Uninstalling](#️-uninstalling)
 - [🚀 Usage](#-usage)
   - [Interactive menu](#interactive-menu)
   - [Non-interactive flags](#non-interactive-flags)
@@ -229,6 +231,71 @@ python3 -m sys_opt
 
 ---
 
+## 🔄 Updating sys-opt
+
+sys-opt **checks PyPI once a day** (in the interactive menu only) and lets you **update right from the terminal** when a new release exists:
+
+```
+┌─ Software Update ────────────────────────┐
+│ A new version of sys-opt is available: 1.2.0
+│ You have version 1.0.0                   │
+└──────────────────────────────────────────┘
+Install the update now?
+   ▸ 1. ✅ Install now
+     2. ⏭ Skip
+```
+
+- Choose **Install now** → it runs `python -m pip install --upgrade sys-opt` for you and prints the new version.
+- Choose **Skip** → that exact version is remembered and won't be offered again (you'll still be asked about the *next* release).
+- **Offline?** The check is silent and harmless — it just skips and retries on the next launch.
+- The check runs **at most once every 24 hours** and only in interactive mode, so scripts and CI are never slowed down.
+
+### Manual update
+
+```bash
+# From PyPI (recommended):
+python -m pip install --upgrade sys-opt     # Windows: py -m pip install --upgrade sys-opt
+
+# From the GitHub clone:
+git pull
+pip install -r requirements.txt
+```
+
+### One-shot update from the CLI
+
+```bash
+python -m sys_opt --update                  # check PyPI + install, no prompt (great for scripts)
+python -m sys_opt --no-update-check         # disable the daily startup check (interactive)
+```
+
+> ⚠️ If you installed `sys-opt` inside a **virtual environment**, run the update from the *same* environment (`source .venv/bin/activate` first), otherwise the new version lands in the wrong place.
+
+---
+
+## 🗑️ Uninstalling
+
+If you installed from **PyPI / pip**:
+
+```bash
+python -m pip uninstall sys-opt             # Windows: py -m pip uninstall sys-opt
+```
+
+If you installed from the **GitHub clone**, the package lives next to the repository, so just remove the folder (and optionally the venv):
+
+```bash
+rm -rf sys-opt  .venv                       # or on Windows: rmdir /s /q sys-opt
+```
+
+### Remove your saved data (optional)
+
+`sys-opt` stores your language preference, benchmark history and HTML reports in `~/.sys-opt` — delete it too if you want a clean slate:
+
+```bash
+rm -rf ~/.sys-opt                          # Windows: rmdir /s /q %USERPROFILE%\.sys-opt
+```
+
+---
+
 ## 🚀 Usage
 
 ### Interactive menu
@@ -289,6 +356,8 @@ Arrow keys move the **▸** cursor, **Enter** selects, **Esc** cancels, and **1-
 | `python -m sys_opt --benchmark-file --benchmark-file-port 9000` | Choose the port for `--benchmark-file` (default: `8765`) |
 | `python -m sys_opt --language it --inspect` | Force a specific language (`it`, `en`, `es`, `fr`, `de`, `pt`, `ru`, `zh`, `ja`, `ar`) |
 | `python -m sys_opt --list-languages` | List all supported languages |
+| `python -m sys_opt --update` | **Check PyPI for a newer release and install it** (no prompt, great for scripts) |
+| `python -m sys_opt --no-update-check` | Disable the automatic daily update check (interactive mode only) |
 | `python -m sys_opt --version` | Show the version |
 
 ### 🎯 Optimization profiles
@@ -558,6 +627,7 @@ sys-opt/
     ├── benchmark.py        # CPU/RAM/disk stress + compare + history
     ├── report.py           # HTML performance report (--report, browser)
     ├── filebench.py        # benchmark an uploaded file in the browser
+    ├── update.py           # PyPI self-update (--update, daily check + prompt)
     ├── utils.py            # safe subprocess / elevation / formatting
     └── i18n/
         ├── __init__.py
@@ -572,7 +642,7 @@ sys-opt/
 python -m unittest discover -s tests -v
 ```
 
-The suite (103 tests) asserts: identical key sets across all 10 languages (221 keys each), English fallback, formatting helpers, safe subprocess handling, live inspection on the current host, dry-run optimizer safety, profile-based step filtering, benchmark measurements with JSON output, a regression guard that JSON stays machine-parseable even with hostile values (embedded newlines / lines beyond 80 columns), **HTML report generation** (`--report` — specs + before/after benchmark, escaping, file writing, browser opening), **browser file benchmarking** (`--benchmark-file` — extension detection, timed execution, timeout, the loopback HTTP server end-to-end via a real socket), and **function-level smoke tests** (`tests/test_smoke.py`) that run the real CLI entry points (`--inspect`, `--inspect --json`, `--optimize --dry-run`, `--optimize --dry-run --profile`, `--benchmark`, `--benchmark --json`, `--benchmark --report`, `--optimize --report`, `--benchmark-file`, `--list-languages`, `--version`) end-to-end with captured output — executed on every OS of the CI matrix as the safety net for the whole CLI surface.
+The suite (130 tests) asserts: identical key sets across all 10 languages (233 keys each), English fallback, formatting helpers, safe subprocess handling, live inspection on the current host, dry-run optimizer safety, profile-based step filtering, benchmark measurements with JSON output, a regression guard that JSON stays machine-parseable even with hostile values (embedded newlines / lines beyond 80 columns), **HTML report generation** (`--report` — specs + before/after benchmark, escaping, file writing, browser opening), **browser file benchmarking** (`--benchmark-file` — extension detection, timed execution, timeout, the loopback HTTP server end-to-end via a real socket), **self-update logic** (`tests/test_update.py` — version comparison incl. pre-release suffixes, PyPI zero-crash, `pip install` flow, the `--update` CLI and the daily-cached interactive prompt, all with mocked network so CI never touches PyPI), and **function-level smoke tests** (`tests/test_smoke.py`) that run the real CLI entry points (`--inspect`, `--inspect --json`, `--optimize --dry-run`, `--optimize --dry-run --profile`, `--benchmark`, `--benchmark --json`, `--benchmark --report`, `--optimize --report`, `--benchmark-file`, `--update`, `--list-languages`, `--version`) end-to-end with captured output — executed on every OS of the CI matrix as the safety net for the whole CLI surface.
 
 **CI (GitHub Actions):** every push / pull request runs `actionlint` (workflow syntax) + `flake8` lint plus the full test suite on a **complete OS × Python matrix** — Ubuntu 22.04/24.04 (x86_64) & 24.04 (arm64), macOS 15 (Intel) & 14 (Apple Silicon), Windows Server 2022 & 2025, across Python **3.8 → 3.14** — plus an independent **packaging job per OS** (Linux, macOS, Windows) that builds the sdist/wheel, validates with `twine check` and smoke-tests a clean install, so a packaging failure on one OS never hides the others — see [.github/workflows/ci.yml](.github/workflows/ci.yml). **Dependabot** ([.github/dependabot.yml](.github/dependabot.yml)) opens automatic weekly PRs to keep the pinned GitHub Actions tags and the Python dependencies (`rich`, `psutil`) up to date — every PR is validated by this same CI matrix before merge, and [dependabot-automerge.yml](.github/workflows/dependabot-automerge.yml) merges them automatically once the matrix is green (minor & patch updates; major updates wait for a human review).
 
