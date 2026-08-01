@@ -38,6 +38,17 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      # Fastest guard of all: reject a static version badge (e.g.
+      # badge/version-1.0.0) in README.md before any Python setup. The
+      # same rule is enforced by tests/test_readme.py across the matrix.
+      # Case-insensitive and kept in sync with HARDCODED_VERSION_RE in
+      # tests/test_readme.py (same regex, enforced across the whole matrix).
+      - name: Reject hardcoded version badges in README
+        run: |
+          if grep -Ein 'version-[0-9]+(\.[0-9]+)+' README.md; then
+            echo "::error::Hardcoded version literal in README.md — badges must stay dynamic (github/v/tag, pypi/v, pypi/pyversions, pypi/dm, pypi/dt)."
+            exit 1
+          fi
       # Fails fast: needs only the repo, so run it BEFORE any Python/uv
       # setup. Validates the YAML syntax AND the ${{ }} expressions of
       # every .github/workflows/*.yml in ~1s, so a broken workflow is
