@@ -148,7 +148,7 @@ def _step_win_game_dvr(t, elevated, dry_run):
         rc, _out, _err = run_cmd(command, timeout=20)
         if rc == 0:
             success += 1
-    return ("ok" if success else "failed"), "%d/%d" % (success, len(commands))
+    return ("ok" if success == len(commands) else "failed"), "%d/%d" % (success, len(commands))
 
 
 def _step_win_update_cache(t, elevated, dry_run):
@@ -334,6 +334,7 @@ def run(console, t, dry_run=False, force=False):
     )
 
     results = []
+    gpu_sched_ok = False
     for label, step in build_steps(t, elevated, dry_run):
         try:
             if not dry_run:
@@ -343,6 +344,8 @@ def run(console, t, dry_run=False, force=False):
                 status, detail = step(t, elevated, dry_run)
         except Exception:  # zero-crash policy
             status, detail = "failed", t("na")
+        if step is _step_win_gpu_sched and status == "ok":
+            gpu_sched_ok = True
         results.append((label, status, detail))
 
     for label, status, detail in results:
@@ -363,4 +366,7 @@ def run(console, t, dry_run=False, force=False):
             border_style="green",
         )
     )
+    if gpu_sched_ok:
+        console.print()
+        console.print("[bold yellow]⚠ %s[/]" % t("reboot_required"))
     return 0 if failed_count == 0 else 1
