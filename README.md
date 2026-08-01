@@ -4,14 +4,25 @@
 
 **Universal Hardware Inspector & Multi-OS Optimizer**
 
-> Inspect your hardware, tune your operating system, in your language.
-> Ispeziona il tuo hardware, ottimizza il tuo sistema operativo, nella tua lingua.
+> Inspect your hardware, tune your operating system — in **your language**.  
+> Ispeziona il tuo hardware, ottimizza il tuo sistema — **nella tua lingua**.
 
-[![Python](https://img.shields.io/badge/Python-3.8%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](#-license)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#-installation)
-[![Languages](https://img.shields.io/badge/%F0%9F%8C%8D-10%20Languages-brightgreen)](#-supported-languages)
-[![CLI](https://img.shields.io/badge/CLI-Rich%20Terminal%20UI-cyan)](#-usage)
+![Python](https://img.shields.io/badge/Python-3.8%2B-3776AB?logo=python&logoColor=white&style=for-the-badge)
+![License](https://img.shields.io/github/license/Leo-Galli/sys-opt?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.0.0-blueviolet?style=for-the-badge)
+![Platforms](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-2ea44f?style=for-the-badge)
+![Languages](https://img.shields.io/badge/i18n-10%20Languages-brightgreen?style=for-the-badge)
+![CLI](https://img.shields.io/badge/CLI-Rich%20Terminal%20UI-cyan?style=for-the-badge)
+![Zero Crash](https://img.shields.io/badge/Zero--Crash-Guaranteed-success?style=for-the-badge)
+
+![Stars](https://img.shields.io/github/stars/Leo-Galli/sys-opt?style=for-the-badge&logo=github&color=gold)
+![Forks](https://img.shields.io/github/forks/Leo-Galli/sys-opt?style=for-the-badge&logo=github)
+![Issues](https://img.shields.io/github/issues/Leo-Galli/sys-opt?style=for-the-badge&logo=github)
+![Last commit](https://img.shields.io/github/last-commit/Leo-Galli/sys-opt?style=for-the-badge&logo=github)
+![Contributors](https://img.shields.io/github/contributors/Leo-Galli/sys-opt?style=for-the-badge&logo=github)
+![Repo size](https://img.shields.io/github/repo-size/Leo-Galli/sys-opt?style=for-the-badge)
+![PRs welcome](https://img.shields.io/badge/PRs-Welcome-ff69b4?style=for-the-badge)
+![Made with ❤️](https://img.shields.io/badge/Made%20with-%E2%9D%A4%EF%B8%8F-red?style=for-the-badge)
 
 **Repository:** [https://github.com/Leo-Galli/sys-opt](https://github.com/Leo-Galli/sys-opt)
 
@@ -28,19 +39,21 @@
 - [✨ Features](#-features)
 - [🌍 Supported Languages](#-supported-languages)
 - [📦 Installation](#-installation)
+  - [⚡ Quick install from GitHub](#-quick-install-from-github)
   - [🐧 Linux](#-linux)
   - [🍎 macOS](#-macos)
   - [🪟 Windows](#-windows)
 - [🚀 Usage](#-usage)
   - [Interactive menu](#interactive-menu)
   - [Non-interactive flags](#non-interactive-flags)
+  - [🎯 Optimization profiles](#-optimization-profiles)
   - [🔐 Elevation](#-elevation)
   - [What each optimizer step does](#what-each-optimizer-step-does)
 - [🗂️ Project Structure](#-project-structure)
 - [🧪 Testing](#-testing)
 - [🩺 Troubleshooting](#-troubleshooting)
 - [❓ FAQ](#-faq)
-- [🇮🇹 Guida rapida in italiano](#-guida-rapida-in-italiano)
+- [🌐 Quick Start Guides (10 languages)](#-quick-start-guides-10-languages)
 - [⚠️ Disclaimer](#-disclaimer)
 - [📄 License](#-license)
 
@@ -67,6 +80,8 @@
 | 🎮 Windows gaming | Enables hardware-accelerated GPU scheduling (HAGS, `HwSchMode=2`) and disables Game DVR / Game Bar background recording to cut capture overhead and smooth frame times *(reboot required — see [FAQ](#-faq))* |
 | 🍎 macOS | Clears `~/Library/Caches` & `/Library/Caches`, flushes DNS (`dscacheutil`, `mDNSResponder`), purges inactive memory (`purge`) |
 | 🐧 Linux | Cleans `/tmp`, releases kernel memory caches (`drop_caches`), auto-detects the package manager and cleans its cache (`apt clean`, `dnf clean all`, `pacman -Sc`, `zypper clean`, `apk cache clean`) |
+
+**🎯 Optimization profiles** — pick the kind of tune-up you want: Full, Gaming, AI/ML, Studio/Work, or Cleanup-only.
 
 **🌐 i18n engine** — 10 complete languages, **zero missing keys** (enforced by tests), automatic locale detection, on-the-fly switching, RTL-aware layout for Arabic.
 
@@ -99,7 +114,7 @@
 
 **Prerequisite:** [Python 3.8+](https://www.python.org/downloads/) on your system.
 
-### Quick — from GitHub (all OS)
+### ⚡ Quick install from GitHub
 
 ```bash
 pip install git+https://github.com/Leo-Galli/sys-opt.git
@@ -306,6 +321,7 @@ When privileges are missing, `sys-opt` shows clear instructions and asks whether
 ```
 sys-opt/
 ├── .gitignore
+├── LICENSE
 ├── README.md
 ├── requirements.txt
 ├── pyproject.toml
@@ -313,13 +329,13 @@ sys-opt/
 │   ├── test_i18n.py        # zero-missing-keys guarantee across 10 languages
 │   ├── test_utils.py       # formatting helpers & safe subprocess
 │   ├── test_inspector.py   # live inspection on the current host
-│   └── test_optimizer.py   # dry-run optimizer safety
+│   └── test_optimizer.py   # dry-run optimizer safety + profile filtering
 └── sys_opt/
     ├── __init__.py
     ├── __main__.py         # allows `python -m sys_opt`
     ├── main.py             # CLI flags + interactive menu + locale detection
     ├── inspector.py        # hardware & OS inspection (zero-crash)
-    ├── optimizer.py        # multi-OS optimization engine
+    ├── optimizer.py        # multi-OS optimization engine + profiles
     ├── utils.py            # safe subprocess / elevation / formatting
     └── i18n/
         ├── __init__.py
@@ -334,7 +350,7 @@ sys-opt/
 python -m unittest discover -s tests -v
 ```
 
-The suite (18 tests) asserts: identical key sets across all 10 languages, English fallback, formatting helpers, safe subprocess handling, live inspection on the current host, and dry-run optimizer safety.
+The suite (20 tests) asserts: identical key sets across all 10 languages, English fallback, formatting helpers, safe subprocess handling, live inspection on the current host, dry-run optimizer safety, and profile-based step filtering.
 
 ---
 
@@ -369,19 +385,206 @@ The suite (18 tests) asserts: identical key sets across all 10 languages, Englis
 
 ---
 
-## 🇮🇹 Guida rapida in italiano
+## 🌐 Quick Start Guides (10 languages)
+
+Pick your language — every guide expands inline (click the flag):
+
+| Flag | Language | Jump |
+|---|---|---|
+| 🇮🇹 | Italiano | [→ guide](#guide-it) |
+| 🇬🇧 | English | [→ guide](#guide-en) |
+| 🇪🇸 | Español | [→ guide](#guide-es) |
+| 🇫🇷 | Français | [→ guide](#guide-fr) |
+| 🇩🇪 | Deutsch | [→ guide](#guide-de) |
+| 🇵🇹 | Português | [→ guide](#guide-pt) |
+| 🇷🇺 | Русский | [→ guide](#guide-ru) |
+| 🇨🇳 | 中文 | [→ guide](#guide-zh) |
+| 🇯🇵 | 日本語 | [→ guide](#guide-ja) |
+| 🇸🇦 | العربية | [→ guide](#guide-ar) |
+
+<details id="guide-it">
+<summary><b>🇮🇹 Italiano</b> — Guida rapida</summary>
 
 ```bash
 git clone https://github.com/Leo-Galli/sys-opt.git
 cd sys-opt
-pip install -r requirements.txt        # (Windows: py -m pip install -r requirements.txt)
+pip install -r requirements.txt        # Windows: py -m pip install -r requirements.txt
 python -m sys_opt                      # apri il menu interattivo
 python -m sys_opt --inspect            # mostra le specifiche hardware
 python -m sys_opt --optimize           # ottimizza il sistema (da Amministratore / con sudo)
 python -m sys_opt --optimize --dry-run # anteprima senza applicare nulla
+python -m sys_opt --optimize --profile gaming  # profilo Gaming: tweak FPS (HAGS + Game DVR)
 ```
 
-L'ottimizzatore Windows include i tweak **FPS**: pianificazione GPU accelerata via hardware (HAGS) e disattivazione della registrazione in background di Game DVR — il riavvio applica le modifiche.
+> 💡 L'ottimizzatore Windows include i tweak **FPS**: pianificazione GPU accelerata via hardware (HAGS) e disattivazione della registrazione in background di Game DVR — il riavvio applica le modifiche.
+
+</details>
+
+<details id="guide-en">
+<summary><b>🇬🇧 English</b> — Quick start</summary>
+
+```bash
+git clone https://github.com/Leo-Galli/sys-opt.git
+cd sys-opt
+pip install -r requirements.txt
+python -m sys_opt                      # open the interactive menu
+python -m sys_opt --inspect            # show the hardware report
+python -m sys_opt --optimize           # optimize the system (Administrator / sudo)
+python -m sys_opt --optimize --dry-run # preview without applying anything
+python -m sys_opt --optimize --profile gaming  # Gaming profile: FPS tweaks (HAGS + Game DVR)
+```
+
+> 💡 The Windows optimizer includes **FPS** tweaks: hardware-accelerated GPU scheduling (HAGS) and disabling Game DVR background recording — a reboot applies the changes.
+
+</details>
+
+<details id="guide-es">
+<summary><b>🇪🇸 Español</b> — Guía rápida</summary>
+
+```bash
+git clone https://github.com/Leo-Galli/sys-opt.git
+cd sys-opt
+pip install -r requirements.txt
+python -m sys_opt                      # abre el menú interactivo
+python -m sys_opt --inspect            # muestra las especificaciones del hardware
+python -m sys_opt --optimize           # optimiza el sistema (Administrador / sudo)
+python -m sys_opt --optimize --dry-run # vista previa sin aplicar nada
+python -m sys_opt --optimize --profile gaming  # perfil Gaming: mejoras FPS (HAGS + Game DVR)
+```
+
+> 💡 El optimizador de Windows incluye mejoras **FPS**: programación de GPU acelerada por hardware (HAGS) y desactivación de la grabación en segundo plano de Game DVR — un reinicio aplica los cambios.
+
+</details>
+
+<details id="guide-fr">
+<summary><b>🇫🇷 Français</b> — Guide rapide</summary>
+
+```bash
+git clone https://github.com/Leo-Galli/sys-opt.git
+cd sys-opt
+pip install -r requirements.txt
+python -m sys_opt                      # ouvre le menu interactif
+python -m sys_opt --inspect            # affiche les spécifications matérielles
+python -m sys_opt --optimize           # optimise le système (Administrateur / sudo)
+python -m sys_opt --optimize --dry-run # aperçu sans rien appliquer
+python -m sys_opt --optimize --profile gaming  # profil Gaming : réglages FPS (HAGS + Game DVR)
+```
+
+> 💡 L'optimiseur Windows inclut des réglages **FPS** : planification GPU accélérée par le matériel (HAGS) et désactivation de l'enregistrement en arrière-plan de Game DVR — un redémarrage applique les changements.
+
+</details>
+
+<details id="guide-de">
+<summary><b>🇩🇪 Deutsch</b> — Schnellstart</summary>
+
+```bash
+git clone https://github.com/Leo-Galli/sys-opt.git
+cd sys-opt
+pip install -r requirements.txt
+python -m sys_opt                      # interaktives Menü öffnen
+python -m sys_opt --inspect            # Hardware-Report anzeigen
+python -m sys_opt --optimize           # System optimieren (Administrator / sudo)
+python -m sys_opt --optimize --dry-run # Vorschau ohne Änderungen
+python -m sys_opt --optimize --profile gaming  # Gaming-Profil: FPS-Tweaks (HAGS + Game DVR)
+```
+
+> 💡 Der Windows-Optimierer enthält **FPS**-Tweaks: hardwarebeschleunigte GPU-Planung (HAGS) und Deaktivierung der Game-DVR-Hintergrundaufnahme — ein Neustart wendet die Änderungen an.
+
+</details>
+
+<details id="guide-pt">
+<summary><b>🇵🇹 Português</b> — Guia rápido</summary>
+
+```bash
+git clone https://github.com/Leo-Galli/sys-opt.git
+cd sys-opt
+pip install -r requirements.txt
+python -m sys_opt                      # abre o menu interativo
+python -m sys_opt --inspect            # mostra as especificações do hardware
+python -m sys_opt --optimize           # otimiza o sistema (Administrador / sudo)
+python -m sys_opt --optimize --dry-run # pré-visualização sem aplicar nada
+python -m sys_opt --optimize --profile gaming  # perfil Gaming: ajustes FPS (HAGS + Game DVR)
+```
+
+> 💡 O otimizador do Windows inclui ajustes de **FPS**: agendamento de GPU acelerado por hardware (HAGS) e desativação da gravação em segundo plano do Game DVR — um reinício aplica as alterações.
+
+</details>
+
+<details id="guide-ru">
+<summary><b>🇷🇺 Русский</b> — Быстрый старт</summary>
+
+```bash
+git clone https://github.com/Leo-Galli/sys-opt.git
+cd sys-opt
+pip install -r requirements.txt
+python -m sys_opt                      # открыть интерактивное меню
+python -m sys_opt --inspect            # показать характеристики железа
+python -m sys_opt --optimize           # оптимизировать систему (Администратор / sudo)
+python -m sys_opt --optimize --dry-run # предпросмотр без применения
+python -m sys_opt --optimize --profile gaming  # профиль Gaming: настройки FPS (HAGS + Game DVR)
+```
+
+> 💡 Оптимизатор Windows включает настройки **FPS**: аппаратное планирование GPU (HAGS) и отключение фоновой записи Game DVR — перезагрузка применяет изменения.
+
+</details>
+
+<details id="guide-zh">
+<summary><b>🇨🇳 中文</b> — 快速入门</summary>
+
+```bash
+git clone https://github.com/Leo-Galli/sys-opt.git
+cd sys-opt
+pip install -r requirements.txt
+python -m sys_opt                      # 打开交互式菜单
+python -m sys_opt --inspect            # 显示硬件规格
+python -m sys_opt --optimize           # 优化系统（管理员 / sudo）
+python -m sys_opt --optimize --dry-run # 预览，不实际执行
+python -m sys_opt --optimize --profile gaming  # 游戏配置：FPS 优化（HAGS + Game DVR）
+```
+
+> 💡 Windows 优化器包含 **FPS** 调整：硬件加速 GPU 计划 (HAGS) 和禁用 Game DVR 后台录制 — 重启后生效。
+
+</details>
+
+<details id="guide-ja">
+<summary><b>🇯🇵 日本語</b> — クイックスタート</summary>
+
+```bash
+git clone https://github.com/Leo-Galli/sys-opt.git
+cd sys-opt
+pip install -r requirements.txt
+python -m sys_opt                      # 対話式メニューを開く
+python -m sys_opt --inspect            # ハードウェア情報を表示
+python -m sys_opt --optimize           # システムを最適化（管理者 / sudo）
+python -m sys_opt --optimize --dry-run # プレビュー（変更は適用しない）
+python -m sys_opt --optimize --profile gaming  # ゲーミング設定：FPS調整（HAGS + Game DVR）
+```
+
+> 💡 Windows オプティマイザーには **FPS** 調整が含まれます：ハードウェアアクセラレーション GPU スケジューリング (HAGS) と Game DVR のバックグラウンド録画の無効化 — 再起動で変更が適用されます。
+
+</details>
+
+<details id="guide-ar">
+<summary><b>🇸🇦 العربية</b> — دليل سريع (RTL)</summary>
+
+<div dir="rtl">
+
+```bash
+git clone https://github.com/Leo-Galli/sys-opt.git
+cd sys-opt
+pip install -r requirements.txt
+python -m sys_opt                      # افتح القائمة التفاعلية
+python -m sys_opt --inspect            # اعرض مواصفات الجهاز
+python -m sys_opt --optimize           # حسّن النظام (مدير / sudo)
+python -m sys_opt --optimize --dry-run # معاينة دون تطبيق أي تغيير
+python -m sys_opt --optimize --profile gaming  # ملف الألعاب: تحسينات FPS (HAGS + Game DVR)
+```
+
+> 💡 يتضمن مُحسِّن Windows تحسينات **FPS**: جدولة GPU المسرَّعة بالعتاد (HAGS) وتعطيل التسجيل الخلفي لـ Game DVR — أعد التشغيل لتطبيق التغييرات.
+
+</div>
+
+</details>
 
 ---
 
