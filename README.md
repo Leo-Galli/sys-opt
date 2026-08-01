@@ -9,7 +9,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.8%2B-3776AB?logo=python&logoColor=white&style=for-the-badge)
 ![License](https://img.shields.io/github/license/Leo-Galli/sys-opt?style=for-the-badge)
-![Version](https://img.shields.io/badge/version-1.0.0-blueviolet?style=for-the-badge)
+![Version](https://img.shields.io/github/v/tag/Leo-Galli/sys-opt?style=for-the-badge&label=version&filter=v*&color=blueviolet)
 ![Platforms](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-2ea44f?style=for-the-badge)
 ![Languages](https://img.shields.io/badge/i18n-10%20Languages-brightgreen?style=for-the-badge)
 ![CLI](https://img.shields.io/badge/CLI-Rich%20Terminal%20UI-cyan?style=for-the-badge)
