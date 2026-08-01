@@ -23,7 +23,9 @@
 ![Repo size](https://img.shields.io/github/repo-size/Leo-Galli/sys-opt?style=for-the-badge)
 ![CI](https://img.shields.io/github/actions/workflow/status/Leo-Galli/sys-opt/ci.yml?style=for-the-badge&logo=githubactions&logoColor=white&label=CI)
 ![PyPI](https://img.shields.io/pypi/v/sys-opt?style=for-the-badge&logo=pypi&logoColor=white)
-![PyPI downloads](https://img.shields.io/pypi/dm/sys-opt?style=for-the-badge&logo=pypi&logoColor=white)
+![Python versions](https://img.shields.io/pypi/pyversions/sys-opt?style=for-the-badge&logo=python&logoColor=white)
+![Downloads / month](https://img.shields.io/pypi/dm/sys-opt?style=for-the-badge&logo=pypi&logoColor=white)
+![Total downloads](https://img.shields.io/pypi/dt/sys-opt?style=for-the-badge&logo=pypi&logoColor=white)
 ![PRs welcome](https://img.shields.io/badge/PRs-Welcome-ff69b4?style=for-the-badge)
 ![Made with ❤️](https://img.shields.io/badge/Made%20with-%E2%9D%A4%EF%B8%8F-red?style=for-the-badge)
 
