@@ -25,8 +25,9 @@ defaults:
   run:
     shell: bash
 
-# NOTE: the three jobs (lint, test, package) have NO `needs:` dependency,
-# so GitHub starts them all at the same time, in parallel.
+# NOTE: all five jobs (lint, test, and the three per-OS package jobs)
+# have NO `needs:` dependency, so GitHub starts them all at the same
+# time, in parallel.
 jobs:
   # ------------------------------------------------------------------ #
   # Lint — OS-independent, run once on the newest LTS runner
@@ -135,22 +136,20 @@ jobs:
           python -m sys_opt --inspect --json | python -c "import json,sys; json.load(sys.stdin); print('JSON OK')"
 
   # ------------------------------------------------------------------ #
-  # Package — build sdist+wheel, validate, install in a clean venv
+  # Package — one independent job PER OS: build sdist+wheel, validate
+  # with twine, install the wheel in a clean venv and smoke test it.
+  # Three separate jobs (not a matrix) so a failure on one OS never
+  # hides the others and each appears as its own entry in the UI.
   # ------------------------------------------------------------------ #
-  package:
-    name: Package (${{ matrix.os }} · py${{ matrix.python-version }})
-    runs-on: ${{ matrix.os }}
+  package-linux:
+    name: Package (Linux · ubuntu-24.04)
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04, macos-14, windows-2022]
-        python-version: ["3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -162,11 +161,57 @@ jobs:
       - name: Install wheel in a clean venv and smoke test
         run: |
           uv venv .smoke-venv
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            PY=.smoke-venv/Scripts/python
-          else
-            PY=.smoke-venv/bin/python
-          fi
-          uv pip install --python "$PY" dist/*.whl
-          "$PY" -m sys_opt --version
-          "$PY" -m sys_opt --inspect --json | "$PY" -c "import json,sys; json.load(sys.stdin); print('INSTALL_OK')"
+          uv pip install --python .smoke-venv/bin/python dist/*.whl
+          .smoke-venv/bin/python -m sys_opt --version
+          .smoke-venv/bin/python -m sys_opt --inspect --json \
+            | .smoke-venv/bin/python -c "import json,sys; json.load(sys.stdin); print('INSTALL_OK')"
+
+  package-macos:
+    name: Package (macOS · macos-14)
+    runs-on: macos-14
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-path: requirements.txt
+      - name: Build sdist and wheel
+        run: uv build
+      - name: Validate artifacts
+        run: uvx twine check dist/*
+      - name: Install wheel in a clean venv and smoke test
+        run: |
+          uv venv .smoke-venv
+          uv pip install --python .smoke-venv/bin/python dist/*.whl
+          .smoke-venv/bin/python -m sys_opt --version
+          .smoke-venv/bin/python -m sys_opt --inspect --json \
+            | .smoke-venv/bin/python -c "import json,sys; json.load(sys.stdin); print('INSTALL_OK')"
+
+  package-windows:
+    name: Package (Windows · windows-2022)
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-path: requirements.txt
+      - name: Build sdist and wheel
+        run: uv build
+      - name: Validate artifacts
+        run: uvx twine check dist/*
+      - name: Install wheel in a clean venv and smoke test
+        run: |
+          uv venv .smoke-venv
+          uv pip install --python .smoke-venv/Scripts/python dist/*.whl
+          .smoke-venv/Scripts/python -m sys_opt --version
+          .smoke-venv/Scripts/python -m sys_opt --inspect --json \
+            | .smoke-venv/Scripts/python -c "import json,sys; json.load(sys.stdin); print('INSTALL_OK')"
