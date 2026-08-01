@@ -380,7 +380,7 @@ python -m unittest discover -s tests -v
 
 The suite (26 tests) asserts: identical key sets across all 10 languages, English fallback, formatting helpers, safe subprocess handling, live inspection on the current host, dry-run optimizer safety, profile-based step filtering, and benchmark measurements with JSON output.
 
-**CI (GitHub Actions):** every push / pull request runs `flake8` lint plus the full test suite on **Windows, macOS and Linux** across Python 3.8–3.12 — see [.github/workflows/ci.yml](.github/workflows/ci.yml).
+**CI (GitHub Actions):** every push / pull request runs `flake8` lint plus the full test suite on a **complete OS × Python matrix** — Ubuntu 22.04/24.04 (x86_64) & 24.04 (arm64), macOS 13 (Intel) & 14 (Apple Silicon), Windows Server 2019 & 2022, across Python **3.8 → 3.14** — plus a packaging job that builds the sdist/wheel, validates with `twine check` and smoke-tests a clean install — see [.github/workflows/ci.yml](.github/workflows/ci.yml).
 
 ---
 
