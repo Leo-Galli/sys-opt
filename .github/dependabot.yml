@@ -5,10 +5,10 @@ updates:
   # ------------------------------------------------------------------ #
   # GitHub Actions — updates every action referenced in the workflows:
   # actions/checkout@v4, actions/setup-python@v5, astral-sh/setup-uv@v5,
-  # actions/upload|download-artifact@v4, rhysd/actionlint@v1.7.12 and
-  # pypa/gh-action-pypi-publish@release/v1. Pinning to real tags matters
-  # (rhysd/actionlint has no floating v1 tag), so keeping them current is
-  # the job of Dependabot, not of manual edits.
+  # actions/upload|download-artifact@v4, rhysd/actionlint@v1.7.12,
+  # codecov/codecov-action@v7 and pypa/gh-action-pypi-publish@release/v1.
+  # Pinning to real tags matters (rhysd/actionlint has no floating v1 tag),
+  # so keeping them current is the job of Dependabot, not of manual edits.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

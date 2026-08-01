@@ -19,6 +19,9 @@ Two further guarantees are enforced here:
   and stays coherent with ``.github/workflows/release.yml``, which must
   still trigger on ``v*`` tags — so the docs and the release workflow
   cannot silently drift apart.
+* The **Codecov coverage badge** (``COVERAGE_BADGE`` below) stays in the
+  header — the live test-coverage % is fed by the ``coverage`` CI job, so
+  removing the badge would hide the test health at a glance.
 
 Note: the ASCII mock-up of the update prompt legitimately contains
 ``You have version 1.0.0`` — a *space* form. The guarded pattern uses the
@@ -58,6 +61,12 @@ DYNAMIC_BADGE_ENDPOINT_RE = re.compile(
     r"img\.shields\.io/(?:pypi|github/v)/[A-Za-z0-9._/-]+"
 )
 
+# The live test-coverage badge, fed by the dedicated ``coverage`` CI job
+# (coverage.py + codecov-action). Kept separate from DYNAMIC_BADGES: it is a
+# different endpoint family (codecov/, not pypi/ or github/v/), so the exact-
+# five multiset guard above must not absorb it. Guarded for presence only.
+COVERAGE_BADGE = "img.shields.io/codecov/c/github/Leo-Galli/sys-opt"
+
 
 class TestReadmeBadges(unittest.TestCase):
     @classmethod
@@ -78,6 +87,43 @@ class TestReadmeBadges(unittest.TestCase):
         self.assertEqual(
             missing, [],
             "Dynamic badge(s) missing from README.md header: %s" % missing,
+        )
+
+    def test_coverage_badge_is_present(self):
+        self.assertIn(
+            COVERAGE_BADGE, self.readme,
+            "README.md header must keep the dynamic Codecov coverage badge "
+            "(%s) so the live test-coverage %% stays visible." % COVERAGE_BADGE,
+        )
+        # Presence alone could pass vacuously: reject any STATIC coverage
+        # badge (e.g. badge/coverage-85%25-green) added alongside the URL.
+        # Keep in sync with the "Reject static coverage badge" grep in
+        # .github/workflows/ci.yml.
+        static = re.findall(r"badge/coverage[^)\s]*", self.readme, re.I)
+        self.assertEqual(
+            static, [],
+            "Static coverage badge(s) found in README.md: %s — the coverage "
+            "%% must stay dynamic (Codecov badge URL), never hardcoded." % static,
+        )
+
+    def test_stated_test_count_matches_suite(self):
+        # The README states the suite size ("The suite (134 tests)"). That
+        # number goes stale the moment anyone adds a test, so verify it against
+        # the actual discovered count instead of trusting the hand-written
+        # figure. Kept in sync with the "Verify stated test count" grep in
+        # .github/workflows/ci.yml (same regex, enforced across the matrix).
+        stated = re.search(r"The suite \((\d+) tests\)", self.readme)
+        self.assertIsNotNone(
+            stated,
+            "README.md must state the suite size as 'The suite (N tests)'",
+        )
+        suite = unittest.defaultTestLoader.discover(str(PROJECT_ROOT / "tests"))
+        actual = suite.countTestCases()
+        self.assertEqual(
+            int(stated.group(1)), actual,
+            "README.md states %s tests but the suite actually contains %s "
+            "— update the number in the Testing section (or add/remove tests "
+            "until they match)." % (stated.group(1), actual),
         )
 
     def test_no_duplicate_or_extra_dynamic_badges(self):

@@ -25,9 +25,9 @@ defaults:
   run:
     shell: bash
 
-# NOTE: all five jobs (lint, test, and the three per-OS package jobs)
-# have NO `needs:` dependency, so GitHub starts them all at the same
-# time, in parallel.
+# NOTE: all six jobs (lint, coverage, test, and the three per-OS package
+# jobs) have NO `needs:` dependency, so GitHub starts them all at the
+# same time, in parallel.
 jobs:
   # ------------------------------------------------------------------ #
   # Lint — OS-independent, run once on the newest LTS runner
@@ -65,6 +65,27 @@ jobs:
           UNKNOWN="$(printf '%s\n' "$BADGES" | sort -u | grep -vEx '(pypi/v/sys-opt|pypi/pyversions/sys-opt|pypi/dm/sys-opt|pypi/dt/sys-opt|github/v/tag/Leo-Galli/sys-opt)' || true)"
           if [ -n "$DUPS" ] || [ -n "$UNKNOWN" ]; then
             echo "::error::README.md must keep exactly the 5 canonical dynamic PyPI/GitHub badges, each once. Duplicates: ${DUPS} Extra: ${UNKNOWN}"
+            exit 1
+          fi
+      # Static-coverage-badge guard: presence of the Codecov URL alone could
+      # pass vacuously, so also reject a hardcoded badge/coverage-XX form.
+      # Kept in sync with test_coverage_badge_is_present in tests/test_readme.py.
+      - name: Reject static coverage badge in README
+        run: |
+          # [[:space:]] instead of \s: POSIX-safe inside a bracket class (the
+          # Python twin uses \s, which matches the same whitespace set).
+          if grep -Ein 'badge/coverage[^)[:space:]]*' README.md; then
+            echo "::error::Static coverage badge found in README.md — the coverage % must stay dynamic (img.shields.io/codecov/...), never hardcoded."
+            exit 1
+          fi
+      # Test-count guard: the README must keep stating the suite size as
+      # 'The suite (N tests)' (the exact N is verified against the real
+      # discovered count by test_stated_test_count_matches_suite across the
+      # matrix; this grep only catches the sentence disappearing).
+      - name: Verify stated test count in README
+        run: |
+          if ! grep -Eq 'The suite \([0-9]+ tests\)' README.md; then
+            echo "::error::README.md must state the suite size as 'The suite (N tests)' in the Testing section."
             exit 1
           fi
       # Coherence guard: the 'Releasing to PyPI' section must keep documenting
@@ -266,3 +287,40 @@ jobs:
           .smoke-venv/Scripts/python.exe -m sys_opt --version
           .smoke-venv/Scripts/python.exe -m sys_opt --inspect --json \
             | .smoke-venv/Scripts/python.exe -c "import json,sys; json.load(sys.stdin); print('INSTALL_OK')"
+
+  # ------------------------------------------------------------------ #
+  # Coverage — one OS is enough to measure the suite; uploads the report
+  # to Codecov so the header badge shows the live coverage %.
+  # Tokenless via OIDC (public repo, no secret needed); fail_ci_if_error:
+  # false so a Codecov hiccup or a not-yet-linked repo never breaks CI.
+  # ------------------------------------------------------------------ #
+  coverage:
+    name: Coverage (Codecov)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      # OIDC id-token for the tokenless Codecov upload (use_oidc below).
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-path: requirements.txt
+      - name: Install dependencies
+        run: uv pip install --system -r requirements.txt coverage
+      - name: Run tests with coverage
+        run: |
+          coverage run --source=sys_opt -m unittest discover -s tests
+          coverage report
+          coverage xml
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          files: coverage.xml
+          use_oidc: true
+          fail_ci_if_error: false
