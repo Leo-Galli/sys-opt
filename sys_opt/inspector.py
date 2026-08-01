@@ -22,7 +22,6 @@ except Exception:  # pragma: no cover - optional dependency
     psutil = None
 
 from rich import box
-from rich.json import JSON
 from rich.panel import Panel
 from rich.table import Table
 
@@ -673,7 +672,12 @@ def run(console, t, as_json=False, rtl=False):
     """Render the full inspection report on the console."""
     sections = collect(t)
     if as_json:
-        console.print(JSON(json.dumps(to_dict(t, sections), ensure_ascii=False, indent=2)))
+        # Write the raw JSON text straight to the console's file. Rich's JSON
+        # renderable and 80-column soft-wrapping can re-emit raw control
+        # characters / split lines inside string values (seen on macOS where
+        # some values are long), producing invalid JSON when piped. json.dumps
+        # always escapes control characters, so this output stays parseable.
+        console.file.write(json.dumps(to_dict(t, sections), ensure_ascii=False, indent=2) + "\n")
         return
     justify = "right" if rtl else "left"
     console.print()

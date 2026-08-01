@@ -152,7 +152,9 @@ def run(console, t, as_json=False):
     }
 
     if as_json:
-        console.print(json.dumps(results, indent=2), markup=False, highlight=False)
+        # Raw write (same rationale as inspector): bypass rich's rendering and
+        # 80-column wrapping so the JSON stays machine-parseable when piped.
+        console.file.write(json.dumps(results, indent=2) + "\n")
         return 0
 
     header_parts = []

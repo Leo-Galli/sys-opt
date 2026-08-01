@@ -44,8 +44,10 @@ jobs:
       # caught before the 44 parallel jobs (lint + 40 test + 3 package)
       # finish. Also runs shellcheck on the run: scripts (preinstalled
       # on Ubuntu runners).
+      # Pinned to a real tag: the repo has NO floating `v1` tag (only
+      # v1.x.y), so `rhysd/actionlint@v1` fails to resolve.
       - name: Validate workflow syntax
-        uses: rhysd/actionlint@v1
+        uses: rhysd/actionlint@v1.7.12
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -211,7 +213,8 @@ jobs:
       - name: Install wheel in a clean venv and smoke test
         run: |
           uv venv .smoke-venv
-          uv pip install --python .smoke-venv/Scripts/python dist/*.whl
-          .smoke-venv/Scripts/python -m sys_opt --version
-          .smoke-venv/Scripts/python -m sys_opt --inspect --json \
-            | .smoke-venv/Scripts/python -c "import json,sys; json.load(sys.stdin); print('INSTALL_OK')"
+          # uv needs the explicit .exe on Windows to resolve the interpreter
+          uv pip install --python .smoke-venv/Scripts/python.exe dist/*.whl
+          .smoke-venv/Scripts/python.exe -m sys_opt --version
+          .smoke-venv/Scripts/python.exe -m sys_opt --inspect --json \
+            | .smoke-venv/Scripts/python.exe -c "import json,sys; json.load(sys.stdin); print('INSTALL_OK')"
