@@ -1,0 +1,87 @@
+name: Nightly Benchmark
+
+on:
+  schedule:
+    # 03:00 UTC every night
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  # Needed to commit the accumulated benchmark data back to the repo.
+  contents: write
+
+concurrency:
+  group: nightly-benchmark
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # ------------------------------------------------------------------ #
+  # Benchmark — one light CPU/RAM/disk run per OS, saved as JSON
+  # ------------------------------------------------------------------ #
+  benchmark:
+    name: Benchmark (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-14, windows-2022]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-path: requirements.txt
+      - name: Install dependencies
+        run: uv pip install --system -r requirements.txt
+      - name: Run benchmark and save JSON
+        run: |
+          python -m sys_opt --benchmark --json \
+            | tee "bench-${{ matrix.os }}.json" \
+            | python -c "import json,sys; json.load(sys.stdin); print('BENCHMARK JSON OK')"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-${{ matrix.os }}
+          path: bench-${{ matrix.os }}.json
+          if-no-files-found: error
+
+  # ------------------------------------------------------------------ #
+  # Report — merge the 3 runs into benchmarks/<os>.json history,
+  # regenerate benchmarks/report.md and commit everything back
+  # ------------------------------------------------------------------ #
+  report:
+    name: Merge & publish report
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    needs: benchmark
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download benchmark artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Merge results and regenerate report
+        run: python3 .github/scripts/update_benchmarks.py artifacts
+      - name: Show comparative report in the run summary
+        run: cat benchmarks/report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Commit benchmark data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add benchmarks
+          if git diff --cached --quiet; then
+            echo "No benchmark data changes — nothing to commit."
+            exit 0
+          fi
+          git commit -m "bench: nightly benchmark results ($(date -u +%Y-%m-%d))"
+          # HEAD:main works from detached HEAD (actions/checkout leaves the
+          # repo without an active branch) — a plain `git push` would fail.
+          git push origin HEAD:main

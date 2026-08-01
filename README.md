@@ -57,6 +57,8 @@
 - [🩺 Troubleshooting](#-troubleshooting)
 - [❓ FAQ](#-faq)
 - [🌐 Quick Start Guides (10 languages)](#-quick-start-guides-10-languages)
+- [🚀 Releasing to PyPI](#-releasing-to-pypi)
+- [🌙 Nightly Benchmark](#-nightly-benchmark)
 - [⚠️ Disclaimer](#-disclaimer)
 - [📄 License](#-license)
 
@@ -347,8 +349,14 @@ sys-opt/
 ├── .flake8
 ├── .gitignore
 ├── .github/workflows/
-│   ├── ci.yml        # lint + tests on Windows / macOS / Linux
-│   └── release.yml   # publish to PyPI on every v* tag
+│   ├── ci.yml                  # lint + tests on Windows / macOS / Linux
+│   ├── release.yml             # publish to PyPI on every v* tag
+│   └── nightly-benchmark.yml   # nightly CPU/RAM/disk benchmark + report
+├── .github/scripts/
+│   └── update_benchmarks.py    # merge nightly results into benchmarks/
+├── benchmarks/
+│   ├── <os>.json               # full benchmark history per OS
+│   └── report.md               # regenerated comparative report
 ├── LICENSE
 ├── README.md
 ├── requirements.txt
@@ -380,7 +388,7 @@ python -m unittest discover -s tests -v
 
 The suite (26 tests) asserts: identical key sets across all 10 languages, English fallback, formatting helpers, safe subprocess handling, live inspection on the current host, dry-run optimizer safety, profile-based step filtering, and benchmark measurements with JSON output.
 
-**CI (GitHub Actions):** every push / pull request runs `flake8` lint plus the full test suite on a **complete OS × Python matrix** — Ubuntu 22.04/24.04 (x86_64) & 24.04 (arm64), macOS 13 (Intel) & 14 (Apple Silicon), Windows Server 2019 & 2022, across Python **3.8 → 3.14** — plus a packaging job that builds the sdist/wheel, validates with `twine check` and smoke-tests a clean install — see [.github/workflows/ci.yml](.github/workflows/ci.yml).
+**CI (GitHub Actions):** every push / pull request runs `actionlint` (workflow syntax) + `flake8` lint plus the full test suite on a **complete OS × Python matrix** — Ubuntu 22.04/24.04 (x86_64) & 24.04 (arm64), macOS 15 (Intel) & 14 (Apple Silicon), Windows Server 2022 & 2025, across Python **3.8 → 3.14** — plus a packaging job that builds the sdist/wheel, validates with `twine check` and smoke-tests a clean install — see [.github/workflows/ci.yml](.github/workflows/ci.yml).
 
 ---
 
@@ -629,6 +637,26 @@ git push origin v1.1.0
 ```
 
 The workflow builds the sdist + wheel, validates them with `twine check`, and publishes using **trusted publishing (OIDC)** — no API token stored in the repo. To enable it, register the PyPI project **`sys-opt`** as a trusted publisher pointing at `Leo-Galli/sys-opt` (workflow `release.yml`, environment `release`). After the first release, the `PyPI` badges above light up and anyone can `pip install sys-opt`.
+
+---
+
+## 🌙 Nightly Benchmark
+
+Every night at **03:00 UTC** (and on demand via **Actions → Nightly Benchmark → Run workflow**), [GitHub Actions](.github/workflows/nightly-benchmark.yml) runs the built-in `--benchmark` (light CPU / RAM / disk stress via `psutil`) on **one GitHub-hosted runner per OS**:
+
+- 🐧 **Linux** — `ubuntu-24.04`
+- 🍎 **macOS** — `macos-14` (Apple Silicon)
+- 🪟 **Windows** — `windows-2022`
+
+Each run is appended to the history file `benchmarks/<os>.json` (last 365 runs kept) and `benchmarks/report.md` is regenerated with a **comparative table of the latest run per OS** plus the recent history — so you can watch performance drift over time (e.g. after a Windows update or a driver change). The report is also printed into the Actions run summary.
+
+**Run it manually:**
+
+```bash
+gh workflow run nightly-benchmark.yml
+```
+
+Because only `benchmarks/**` changes, the main CI matrix is automatically skipped for these commits (`paths-ignore`), so nightly runs never waste the 44 CI jobs.
 
 ---
 
