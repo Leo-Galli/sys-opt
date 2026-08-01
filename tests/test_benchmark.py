@@ -59,6 +59,27 @@ class TestBenchmark(unittest.TestCase):
         for key in ("cpu_mops", "ram_mbps", "disk_write_mbps", "disk_read_mbps", "elapsed_seconds"):
             self.assertIn(key, data)
 
+    def test_run_json_mode_stays_valid_on_narrow_console(self):
+        """Smoke: benchmark JSON stays machine-parseable on a narrow
+        80-column console. Benchmark values are short numbers, so this is a
+        parseability guard; the hostile-value case (long strings / embedded
+        newlines) is covered by the inspector regression test, where string
+        values can be long and contain control characters.
+        """
+        import json as jsonlib
+        from io import StringIO
+
+        stream = StringIO()
+        console = Console(file=stream, width=80)
+        t = build_translator("en")
+        rc = run(console, t, as_json=True)
+        data = jsonlib.loads(stream.getvalue())
+        self.assertEqual(rc, 0)
+        self.assertEqual(
+            set(data),
+            {"cpu_mops", "ram_mbps", "disk_write_mbps", "disk_read_mbps", "elapsed_seconds"},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

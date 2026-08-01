@@ -49,6 +49,32 @@ class TestInspector(unittest.TestCase):
         self.assertIsInstance(dumped, str)
         self.assertGreater(len(dumped), 0)
 
+    def test_json_output_stays_valid_with_hostile_values(self):
+        """Regression: rich's JSON renderable and the 80-column wrapping used
+        to re-emit raw control characters / split long values, producing
+        invalid JSON when piped (seen on macOS, where sysctl CPU values end
+        with a newline and exceed 80 columns). The output must stay parseable
+        and round-trip the hostile value intact.
+        """
+        import json as jsonlib
+        from io import StringIO
+
+        from rich.console import Console
+
+        from sys_opt import inspector
+
+        nasty_model = "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz" + " X" * 30 + "\n"
+        original = inspector._cpu_model
+        inspector._cpu_model = lambda: nasty_model
+        try:
+            stream = StringIO()
+            console = Console(file=stream, width=80)
+            inspector.run(console, self.t, as_json=True)
+            data = jsonlib.loads(stream.getvalue())
+        finally:
+            inspector._cpu_model = original
+        self.assertEqual(data["CPU"]["Model"], nasty_model)
+
 
 if __name__ == "__main__":
     unittest.main()
