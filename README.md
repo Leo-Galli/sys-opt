@@ -233,7 +233,7 @@ python3 -m sys_opt
 python -m sys_opt        # or just: sys-opt  (after pip install)
 ```
 
-On the **very first run** you choose your language (↑/↓ + Enter) — it is then remembered forever on that machine. The main menu is also arrow-key driven:
+On the **very first run** you choose your language (↑/↓ + Enter) — it is then remembered forever on that machine. The main menu is also arrow-key driven, archinstall-style (boxed frame, numbered items, **▸** cursor, selected row highlighted):
 
 ```
  ███████╗██╗   ██╗███████╗      ██████╗ ██████╗ ████████╗
@@ -241,17 +241,22 @@ On the **very first run** you choose your language (↑/↓ + Enter) — it is t
  ███████╗ ╚████╔╝ ███████╗     ██║   ██║██║   ██║   ██║
  ╚════██║  ╚██╔╝  ╚════██║     ██║   ██║██║   ██║   ██║
  ███████║   ██║   ███████║     ╚██████╔╝╚██████╔╝   ██║
- ╚══════╝   ╚═╝   ╚══════╝      ╚═════╝  ╚═════╝    ╚═╝ ▶ 1. 🔍 Inspect System Specs
-    2. 🚀 Run System Optimization
-    3. ⚡ Full Suite
-    4. 📊 Run Performance Benchmark
-    5. 🌐 Change Language
-    6. 🚪 Exit
+ ╚══════╝   ╚═╝   ╚══════╝      ╚═════╝  ╚═════╝    ╚═╝
 
-   Use ↑/↓ to move, Enter to select, Esc to go back
+┌─ Main Menu ───────────────────────────────┐
+│                                            │
+│   ▸ 1. 🔍 Inspect System Specs             │
+│     2. 🚀 Run System Optimization          │
+│     3. ⚡ Full Suite                       │
+│     4. 📊 Run Performance Benchmark        │
+│     5. 🌐 Change Language                  │
+│     6. 🚪 Exit                             │
+│                                            │
+│   ↑/↓ move · Enter select · Esc back       │
+└────────────────────────────────────────────┘
 ```
 
-Arrow keys move the **▶** cursor, **Enter** selects, **Esc** cancels, and **1-9** jump straight to an item. The same controls power the language picker and the optimization-profile chooser.
+Arrow keys move the **▸** cursor, **Enter** selects, **Esc** cancels, and **1-9** jump straight to an item. The same controls power the language picker and the optimization-profile chooser.
 
 ### Non-interactive flags
 

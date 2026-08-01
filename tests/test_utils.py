@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 """Tests for shared utilities."""
 
+import re
 import tempfile
 import unittest
 
 from sys_opt.utils import (
+    _display_width,
+    _fit_width,
+    _menu_frame,
     config_path,
     format_bytes,
     format_freq,
@@ -14,6 +18,8 @@ from sys_opt.utils import (
     run_cmd,
     save_config,
 )
+
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 
 class TestFormatting(unittest.TestCase):
@@ -51,6 +57,54 @@ class TestSubprocess(unittest.TestCase):
 class TestElevation(unittest.TestCase):
     def test_is_admin_returns_bool(self):
         self.assertIsInstance(is_admin(), bool)
+
+
+class TestArrowMenu(unittest.TestCase):
+    """The archinstall-style boxed menu must never wrap (redraw math)."""
+
+    def test_frame_is_boxed(self):
+        frame = _menu_frame("Title", ["Alpha", "Beta"], 0, "hint", width=40)
+        self.assertTrue(frame[0].startswith("\x1b[36m┌─"))
+        self.assertTrue(frame[-1].endswith("┘\x1b[0m"))
+        self.assertTrue(frame[-1].startswith("\x1b[36m└"))
+        self.assertIn("─", frame[0])
+
+    def test_selected_row_has_cursor_marker(self):
+        frame = _menu_frame("T", ["Alpha", "Beta"], 0, None, width=40)
+        selected = _ANSI.sub("", frame[2])
+        other = _ANSI.sub("", frame[3])
+        self.assertIn("▸ 1. Alpha", selected)
+        self.assertIn("  2. Beta", other)
+        self.assertNotIn("▸", other)
+
+    def test_cursor_moves_to_other_row(self):
+        frame = _menu_frame("T", ["Alpha", "Beta"], 1, None, width=40)
+        first = _ANSI.sub("", frame[2])
+        second = _ANSI.sub("", frame[3])
+        self.assertIn("  1. Alpha", first)
+        self.assertIn("▸ 2. Beta", second)
+
+    def test_rows_never_wrap_wide_chars(self):
+        """Even with emoji/CJK items every line fits the width exactly."""
+        frame = _menu_frame(
+            "Menu", ["🔍 Inspect", "日本語の項目が長い場合", "🚀 Optimize"], 1, "Use ↑/↓", width=40
+        )
+        for line in frame:
+            visible = _ANSI.sub("", line)
+            self.assertLessEqual(_display_width(visible), 40, repr(visible))
+
+    def test_frame_height_is_constant(self):
+        """Redraw math moves up len(frame) lines; height must not change."""
+        first = _menu_frame("T", ["A", "B", "C"], 0, "hint", width=40)
+        second = _menu_frame("T", ["A", "B", "C"], 2, "hint", width=40)
+        self.assertEqual(len(first), len(second))
+        self.assertEqual(len(first), 8)  # border + blank + 3 items + blank + hint + border
+
+    def test_fit_width_respects_display_columns(self):
+        self.assertEqual(_display_width("abc"), 3)
+        self.assertEqual(_display_width("🔍"), 2)
+        self.assertLessEqual(_display_width(_fit_width("日本語です", 6)), 6)
+        self.assertEqual(_fit_width("abc", 2), "ab")
 
 
 class TestConfigPersistence(unittest.TestCase):

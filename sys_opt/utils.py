@@ -10,6 +10,7 @@ import re
 import subprocess
 import sys
 import time
+import unicodedata
 from pathlib import Path
 
 try:
@@ -232,15 +233,88 @@ def _terminal_width(fallback=88):
         return fallback
 
 
+def _char_width(char):
+    """Display width of one character: wide/emoji chars count as 2 columns."""
+    if unicodedata.combining(char):
+        return 0
+    if unicodedata.east_asian_width(char) in ("W", "F"):
+        return 2
+    return 1
+
+
+def _display_width(text):
+    """Total display columns of ``text`` (emoji-aware, ignores nothing)."""
+    return sum(_char_width(char) for char in text)
+
+
+def _fit_width(text, limit):
+    """Truncate ``text`` so it fits in at most ``limit`` display columns."""
+    if limit <= 0:
+        return ""
+    out = []
+    width = 0
+    for char in text:
+        char_width = _char_width(char)
+        if width + char_width > limit:
+            break
+        out.append(char)
+        width += char_width
+    return "".join(out)
+
+
+_CYAN = "\x1b[36m"
+_BOLD_CYAN = "\x1b[1;36m"
+_DIM = "\x1b[2m"
+_RESET = "\x1b[0m"
+
+
 def _menu_frame(title, items, selected, hint, width=None):
-    """Render the selectable menu as plain single-line text (no wrapping)."""
+    """Render an archinstall-style select menu as plain, non-wrapping lines.
+
+    Layout (borders in cyan, selected row bold cyan with a ▸ cursor,
+    hint dimmed)::
+
+        ┌─ <title> ──────────────────────────┐
+        │                                    │
+        │   ▸ 1. <item>                      │
+        │     2. <item>                      │
+        │                                    │
+        │   <hint>                           │
+        └────────────────────────────────────┘
+
+    Every returned line is at most ``width`` display columns wide — wide
+    characters (emoji, CJK) are measured, not counted — so lines never wrap
+    and the caller's cursor-up re-render math stays exact.
+    """
     width = width or _terminal_width()
-    lines = [str(title), ""]
+    inner = max(20, width - 2)
+
+    # Title row: "┌─ <title> <─>┐" must total inner + 2 columns; cap the title
+    # at inner - 4 so at least one dash always fits (no overflow when the
+    # title is long).
+    title_fit = _fit_width(str(title), inner - 4)
+    title_pad = max(1, inner - 3 - _display_width(title_fit))
+    top = _CYAN + "┌─ %s %s┐" % (title_fit, "─" * title_pad) + _RESET
+    lines = [top]
+    lines.append("│%s│" % (" " * inner))
     for index, item in enumerate(items):
-        marker = "▶" if index == selected else " "
-        lines.append(("%s %d. %s" % (marker, index + 1, item))[:width])
+        marker = "▸" if index == selected else " "
+        text_fit = _fit_width(str(item), inner - 8)
+        row_plain = "  %s %d. %s" % (marker, index + 1, text_fit)
+        pad = max(0, inner - _display_width(row_plain))
+        row = "│%s%s│" % (row_plain, " " * pad)
+        if index == selected:
+            lines.append(_BOLD_CYAN + row + _RESET)
+        else:
+            lines.append(row)
+    lines.append("│%s│" % (" " * inner))
     if hint:
-        lines.extend(["", hint[:width]])
+        # Hint row is "│ <hint><pad>│": prefix+separator+suffix = 3 columns,
+        # so the hint itself may fill up to inner - 1 (not inner - 3).
+        hint_fit = _fit_width(str(hint), inner - 1)
+        hint_pad = max(0, inner - 1 - _display_width(hint_fit))
+        lines.append("│ %s%s│" % (_DIM + hint_fit + _RESET, " " * hint_pad))
+    lines.append(_CYAN + "└%s┘" % ("─" * inner) + _RESET)
     return lines
 
 
