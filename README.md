@@ -385,7 +385,8 @@ sys-opt/
 │   ├── test_utils.py       # formatting helpers & safe subprocess
 │   ├── test_inspector.py   # live inspection + JSON regression guard
 │   ├── test_benchmark.py   # CPU/RAM/disk stress + JSON output
-│   └── test_optimizer.py   # dry-run optimizer safety + profile filtering
+│   ├── test_optimizer.py   # dry-run optimizer safety + profile filtering
+│   └── test_smoke.py       # end-to-end CLI flags (function-level, all OS)
 └── sys_opt/
     ├── __init__.py
     ├── __main__.py         # allows `python -m sys_opt`
@@ -406,7 +407,7 @@ sys-opt/
 python -m unittest discover -s tests -v
 ```
 
-The suite (28 tests) asserts: identical key sets across all 10 languages, English fallback, formatting helpers, safe subprocess handling, live inspection on the current host, dry-run optimizer safety, profile-based step filtering, benchmark measurements with JSON output, and a regression guard that JSON stays machine-parseable even with hostile values (embedded newlines / lines beyond 80 columns).
+The suite (51 tests) asserts: identical key sets across all 10 languages, English fallback, formatting helpers, safe subprocess handling, live inspection on the current host, dry-run optimizer safety, profile-based step filtering, benchmark measurements with JSON output, a regression guard that JSON stays machine-parseable even with hostile values (embedded newlines / lines beyond 80 columns), and **function-level smoke tests** (`tests/test_smoke.py`) that run the real CLI entry points (`--inspect`, `--inspect --json`, `--optimize --dry-run`, `--optimize --dry-run --profile`, `--benchmark`, `--benchmark --json`, `--list-languages`, `--version`) end-to-end with captured output — executed on every OS of the CI matrix as the safety net for the whole CLI surface.
 
 **CI (GitHub Actions):** every push / pull request runs `actionlint` (workflow syntax) + `flake8` lint plus the full test suite on a **complete OS × Python matrix** — Ubuntu 22.04/24.04 (x86_64) & 24.04 (arm64), macOS 15 (Intel) & 14 (Apple Silicon), Windows Server 2022 & 2025, across Python **3.8 → 3.14** — plus an independent **packaging job per OS** (Linux, macOS, Windows) that builds the sdist/wheel, validates with `twine check` and smoke-tests a clean install, so a packaging failure on one OS never hides the others — see [.github/workflows/ci.yml](.github/workflows/ci.yml). **Dependabot** ([.github/dependabot.yml](.github/dependabot.yml)) opens automatic weekly PRs to keep the pinned GitHub Actions tags and the Python dependencies (`rich`, `psutil`) up to date — every PR is validated by this same CI matrix before merge, and [dependabot-automerge.yml](.github/workflows/dependabot-automerge.yml) merges them automatically once the matrix is green (minor & patch updates; major updates wait for a human review).
 
