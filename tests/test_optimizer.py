@@ -5,7 +5,7 @@ import os
 import unittest
 
 from sys_opt.i18n.languages import build_translator
-from sys_opt.optimizer import PROFILE_ORDER, build_steps, run
+from sys_opt.optimizer import PROFILE_ORDER, build_steps
 
 
 class TestOptimizer(unittest.TestCase):

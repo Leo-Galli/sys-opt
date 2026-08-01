@@ -495,7 +495,8 @@ def _physical_drives(t):
                     "-NoProfile",
                     "-NonInteractive",
                     "-Command",
-                    "Get-PhysicalDisk | Select-Object FriendlyName,MediaType,BusType,@{N='SizeGB';E={[math]::Round($_.Size/1GB,1)}} | Format-List",
+                    "Get-PhysicalDisk | Select-Object FriendlyName,MediaType,BusType,"
+                    "@{N='SizeGB';E={[math]::Round($_.Size/1GB,1)}} | Format-List",
                 ],
                 timeout=30,
             )
@@ -526,7 +527,8 @@ def _physical_drives(t):
                         "-NoProfile",
                         "-NonInteractive",
                         "-Command",
-                        "Get-CimInstance Win32_DiskDrive | Select-Object Model,InterfaceType,@{N='SizeGB';E={[math]::Round($_.Size/1GB,1)}} | Format-List",
+                        "Get-CimInstance Win32_DiskDrive | Select-Object Model,InterfaceType,"
+                        "@{N='SizeGB';E={[math]::Round($_.Size/1GB,1)}} | Format-List",
                     ],
                     timeout=30,
                 )
@@ -634,7 +636,10 @@ def collect(t):
             "type": "table",
             "title": t("section_storage"),
             "headers": [t("label_name"), t("label_interface"), t("label_size")],
-            "rows": [[d.get("name", "N/A"), d.get("interface", "N/A"), d.get("total", "N/A")] for d in storage["drives"]],
+            "rows": [
+                [d.get("name", "N/A"), d.get("interface", "N/A"), d.get("total", "N/A")]
+                for d in storage["drives"]
+            ],
         },
         {
             "type": "table",

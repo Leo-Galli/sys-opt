@@ -21,6 +21,9 @@
 ![Last commit](https://img.shields.io/github/last-commit/Leo-Galli/sys-opt?style=for-the-badge&logo=github)
 ![Contributors](https://img.shields.io/github/contributors/Leo-Galli/sys-opt?style=for-the-badge&logo=github)
 ![Repo size](https://img.shields.io/github/repo-size/Leo-Galli/sys-opt?style=for-the-badge)
+![CI](https://img.shields.io/github/actions/workflow/status/Leo-Galli/sys-opt/ci.yml?style=for-the-badge&logo=githubactions&logoColor=white&label=CI)
+![PyPI](https://img.shields.io/pypi/v/sys-opt?style=for-the-badge&logo=pypi&logoColor=white)
+![PyPI downloads](https://img.shields.io/pypi/dm/sys-opt?style=for-the-badge&logo=pypi&logoColor=white)
 ![PRs welcome](https://img.shields.io/badge/PRs-Welcome-ff69b4?style=for-the-badge)
 ![Made with ❤️](https://img.shields.io/badge/Made%20with-%E2%9D%A4%EF%B8%8F-red?style=for-the-badge)
 
@@ -341,7 +344,11 @@ When privileges are missing, `sys-opt` shows clear instructions and asks whether
 
 ```
 sys-opt/
+├── .flake8
 ├── .gitignore
+├── .github/workflows/
+│   ├── ci.yml        # lint + tests on Windows / macOS / Linux
+│   └── release.yml   # publish to PyPI on every v* tag
 ├── LICENSE
 ├── README.md
 ├── requirements.txt
@@ -372,6 +379,8 @@ python -m unittest discover -s tests -v
 ```
 
 The suite (26 tests) asserts: identical key sets across all 10 languages, English fallback, formatting helpers, safe subprocess handling, live inspection on the current host, dry-run optimizer safety, profile-based step filtering, and benchmark measurements with JSON output.
+
+**CI (GitHub Actions):** every push / pull request runs `flake8` lint plus the full test suite on **Windows, macOS and Linux** across Python 3.8–3.12 — see [.github/workflows/ci.yml](.github/workflows/ci.yml).
 
 ---
 
@@ -606,6 +615,20 @@ python -m sys_opt --optimize --profile gaming  # ملف الألعاب: تحسي
 </div>
 
 </details>
+
+---
+
+## 🚀 Releasing to PyPI
+
+The package is published automatically by [GitHub Actions](.github/workflows/release.yml) whenever you push a **tag** matching `v*`:
+
+```bash
+git tag v1.1.0
+# bump the version in pyproject.toml first, then:
+git push origin v1.1.0
+```
+
+The workflow builds the sdist + wheel, validates them with `twine check`, and publishes using **trusted publishing (OIDC)** — no API token stored in the repo. To enable it, register the PyPI project **`sys-opt`** as a trusted publisher pointing at `Leo-Galli/sys-opt` (workflow `release.yml`, environment `release`). After the first release, the `PyPI` badges above light up and anyone can `pip install sys-opt`.
 
 ---
 

@@ -137,9 +137,18 @@ def _step_win_gpu_sched(t, elevated, dry_run):
 def _step_win_game_dvr(t, elevated, dry_run):
     """Disable Game DVR / Game Bar background recording (removes capture overhead)."""
     commands = [
-        ["reg", "add", r"HKCU\System\GameConfigStore", "/v", "GameDVR_Enabled", "/t", "REG_DWORD", "/d", "0", "/f"],
-        ["reg", "add", r"HKCU\System\GameConfigStore", "/v", "GameDVR_FSEBehaviorMode", "/t", "REG_DWORD", "/d", "2", "/f"],
-        ["reg", "add", r"HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR", "/v", "AppCaptureEnabled", "/t", "REG_DWORD", "/d", "0", "/f"],
+        [
+            "reg", "add", r"HKCU\System\GameConfigStore",
+            "/v", "GameDVR_Enabled", "/t", "REG_DWORD", "/d", "0", "/f",
+        ],
+        [
+            "reg", "add", r"HKCU\System\GameConfigStore",
+            "/v", "GameDVR_FSEBehaviorMode", "/t", "REG_DWORD", "/d", "2", "/f",
+        ],
+        [
+            "reg", "add", r"HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR",
+            "/v", "AppCaptureEnabled", "/t", "REG_DWORD", "/d", "0", "/f",
+        ],
     ]
     if dry_run:
         return "ok", "; ".join(" ".join(c) for c in commands)
