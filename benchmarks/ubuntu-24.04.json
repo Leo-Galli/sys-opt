@@ -1,0 +1,12 @@
+[
+  {
+    "timestamp": "2026-08-02T05:52:39Z",
+    "run_id": "30734869459",
+    "os": "ubuntu-24.04",
+    "cpu_mops": 7.27,
+    "ram_mbps": 19646.1,
+    "disk_write_mbps": 1503.8,
+    "disk_read_mbps": 7546.9,
+    "elapsed_seconds": 1.16
+  }
+]
