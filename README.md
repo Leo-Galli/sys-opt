@@ -236,6 +236,14 @@ python3 -m sys_opt
 
 ## 🔄 Updating sys-opt
 
+**Quick reference — update in one line:**
+
+```bash
+python -m sys_opt --update                  # check PyPI + install the newest release (all OS)
+```
+
+> Windows: if `python` is not on your PATH, use `py -m sys_opt --update`.
+
 sys-opt **checks PyPI once a day** (in the interactive menu only) and lets you **update right from the terminal** when a new release exists:
 
 ```
@@ -253,23 +261,22 @@ Install the update now?
 - **Offline?** The check is silent and harmless — it just skips and retries on the next launch.
 - The check runs **at most once every 24 hours** and only in interactive mode, so scripts and CI are never slowed down.
 
-### Manual update
-
-```bash
-# From PyPI (recommended):
-python -m pip install --upgrade sys-opt     # Windows: py -m pip install --upgrade sys-opt
-
-# From the GitHub clone:
-git pull
-pip install -r requirements.txt
-```
-
 ### One-shot update from the CLI
 
 ```bash
 python -m sys_opt --update                  # check PyPI + install, no prompt (great for scripts)
 python -m sys_opt --no-update-check         # disable the daily startup check (interactive)
+python -m sys_opt --version                 # show the currently installed version
 ```
+
+### Manual update (any package manager)
+
+| Install method | Update command |
+|---|---|
+| PyPI / pip (recommended) | `python -m pip install --upgrade sys-opt` (Windows: `py -m pip ...`) |
+| GitHub clone | `git pull` then `pip install -r requirements.txt` |
+| pipx | `pipx upgrade sys-opt` |
+| uv | `uv tool upgrade sys-opt` (or `uv pip install --upgrade sys-opt` in a venv) |
 
 > ⚠️ If you installed `sys-opt` inside a **virtual environment**, run the update from the *same* environment (`source .venv/bin/activate` first), otherwise the new version lands in the wrong place.
 
@@ -277,17 +284,20 @@ python -m sys_opt --no-update-check         # disable the daily startup check (i
 
 ## 🗑️ Uninstalling
 
-If you installed from **PyPI / pip**:
+**Quick reference — remove in one line:**
 
 ```bash
 python -m pip uninstall sys-opt             # Windows: py -m pip uninstall sys-opt
 ```
 
-If you installed from the **GitHub clone**, the package lives next to the repository, so just remove the folder (and optionally the venv):
+| Install method | Uninstall command |
+|---|---|
+| PyPI / pip | `python -m pip uninstall sys-opt` (Windows: `py -m pip uninstall sys-opt`) |
+| pipx | `pipx uninstall sys-opt` |
+| uv | `uv tool uninstall sys-opt` (or `uv pip uninstall sys-opt` in a venv) |
+| GitHub clone | The package lives next to the repository — just delete the folder (and the venv): `rm -rf sys-opt .venv` (Windows: `rmdir /s /q sys-opt`) |
 
-```bash
-rm -rf sys-opt  .venv                       # or on Windows: rmdir /s /q sys-opt
-```
+> 💡 If you installed inside a **virtual environment**, activate it first (`source .venv/bin/activate`) or use that environment's `pip` directly (`python -m pip uninstall sys-opt`), otherwise pip reports the package as not installed.
 
 ### Remove your saved data (optional)
 
@@ -678,6 +688,10 @@ The suite (136 tests) asserts: identical key sets across all 10 languages (233 k
 
 **How do I change the language?** Menu → `🌐 Change Language` (saved to `~/.sys-opt/config.json`, remembered forever), or pass `--language <code>` once.
 
+**How do I update sys-opt?** Run `python -m sys_opt --update` (check PyPI + install, no prompt). Or manually: `python -m pip install --upgrade sys-opt` (Windows: `py -m pip install --upgrade sys-opt`). The interactive menu also offers the update automatically once a day when a new release exists.
+
+**How do I uninstall sys-opt?** `python -m pip uninstall sys-opt` (Windows: `py -m pip uninstall sys-opt`). If you installed from the GitHub clone, delete the folder instead — see [Uninstalling](#️-uninstalling) for all methods. Your saved data lives in `~/.sys-opt` (config, benchmarks, reports): remove it too if you want a clean slate.
+
 **How do I choose what to optimize?** The menu asks for an **optimization profile** (Gaming, AI, Studio, Cleanup or Full) whenever you pick *Run System Optimization* or *Full Suite*; from the CLI use `--profile <name>`.
 
 ---
@@ -711,6 +725,8 @@ python -m sys_opt --inspect            # mostra le specifiche hardware
 python -m sys_opt --optimize           # ottimizza il sistema (da Amministratore / con sudo)
 python -m sys_opt --optimize --dry-run # anteprima senza applicare nulla
 python -m sys_opt --optimize --profile gaming  # profilo Gaming: tweak FPS (HAGS + Game DVR)
+python -m sys_opt --update            # aggiorna sys-opt all'ultima versione
+python -m pip uninstall sys-opt       # disinstalla (Windows: py -m pip uninstall sys-opt)
 ```
 
 > 💡 L'ottimizzatore Windows include i tweak **FPS**: pianificazione GPU accelerata via hardware (HAGS) e disattivazione della registrazione in background di Game DVR — il riavvio applica le modifiche.
@@ -729,6 +745,8 @@ python -m sys_opt --inspect            # show the hardware report
 python -m sys_opt --optimize           # optimize the system (Administrator / sudo)
 python -m sys_opt --optimize --dry-run # preview without applying anything
 python -m sys_opt --optimize --profile gaming  # Gaming profile: FPS tweaks (HAGS + Game DVR)
+python -m sys_opt --update            # update sys-opt to the latest version
+python -m pip uninstall sys-opt       # uninstall (Windows: py -m pip uninstall sys-opt)
 ```
 
 > 💡 The Windows optimizer includes **FPS** tweaks: hardware-accelerated GPU scheduling (HAGS) and disabling Game DVR background recording — a reboot applies the changes.
@@ -747,6 +765,8 @@ python -m sys_opt --inspect            # muestra las especificaciones del hardwa
 python -m sys_opt --optimize           # optimiza el sistema (Administrador / sudo)
 python -m sys_opt --optimize --dry-run # vista previa sin aplicar nada
 python -m sys_opt --optimize --profile gaming  # perfil Gaming: mejoras FPS (HAGS + Game DVR)
+python -m sys_opt --update            # actualiza sys-opt a la última versión
+python -m pip uninstall sys-opt       # desinstala (Windows: py -m pip uninstall sys-opt)
 ```
 
 > 💡 El optimizador de Windows incluye mejoras **FPS**: programación de GPU acelerada por hardware (HAGS) y desactivación de la grabación en segundo plano de Game DVR — un reinicio aplica los cambios.
@@ -765,6 +785,8 @@ python -m sys_opt --inspect            # affiche les spécifications matérielle
 python -m sys_opt --optimize           # optimise le système (Administrateur / sudo)
 python -m sys_opt --optimize --dry-run # aperçu sans rien appliquer
 python -m sys_opt --optimize --profile gaming  # profil Gaming : réglages FPS (HAGS + Game DVR)
+python -m sys_opt --update            # met à jour sys-opt vers la dernière version
+python -m pip uninstall sys-opt       # désinstalle (Windows : py -m pip uninstall sys-opt)
 ```
 
 > 💡 L'optimiseur Windows inclut des réglages **FPS** : planification GPU accélérée par le matériel (HAGS) et désactivation de l'enregistrement en arrière-plan de Game DVR — un redémarrage applique les changements.
@@ -783,6 +805,8 @@ python -m sys_opt --inspect            # Hardware-Report anzeigen
 python -m sys_opt --optimize           # System optimieren (Administrator / sudo)
 python -m sys_opt --optimize --dry-run # Vorschau ohne Änderungen
 python -m sys_opt --optimize --profile gaming  # Gaming-Profil: FPS-Tweaks (HAGS + Game DVR)
+python -m sys_opt --update            # aktualisiert sys-opt auf die neueste Version
+python -m pip uninstall sys-opt       # deinstalliert (Windows: py -m pip uninstall sys-opt)
 ```
 
 > 💡 Der Windows-Optimierer enthält **FPS**-Tweaks: hardwarebeschleunigte GPU-Planung (HAGS) und Deaktivierung der Game-DVR-Hintergrundaufnahme — ein Neustart wendet die Änderungen an.
@@ -801,6 +825,8 @@ python -m sys_opt --inspect            # mostra as especificações do hardware
 python -m sys_opt --optimize           # otimiza o sistema (Administrador / sudo)
 python -m sys_opt --optimize --dry-run # pré-visualização sem aplicar nada
 python -m sys_opt --optimize --profile gaming  # perfil Gaming: ajustes FPS (HAGS + Game DVR)
+python -m sys_opt --update            # atualiza o sys-opt para a versão mais recente
+python -m pip uninstall sys-opt       # desinstala (Windows: py -m pip uninstall sys-opt)
 ```
 
 > 💡 O otimizador do Windows inclui ajustes de **FPS**: agendamento de GPU acelerado por hardware (HAGS) e desativação da gravação em segundo plano do Game DVR — um reinício aplica as alterações.
@@ -819,6 +845,8 @@ python -m sys_opt --inspect            # показать характерист
 python -m sys_opt --optimize           # оптимизировать систему (Администратор / sudo)
 python -m sys_opt --optimize --dry-run # предпросмотр без применения
 python -m sys_opt --optimize --profile gaming  # профиль Gaming: настройки FPS (HAGS + Game DVR)
+python -m sys_opt --update            # обновляет sys-opt до последней версии
+python -m pip uninstall sys-opt       # удаляет (Windows: py -m pip uninstall sys-opt)
 ```
 
 > 💡 Оптимизатор Windows включает настройки **FPS**: аппаратное планирование GPU (HAGS) и отключение фоновой записи Game DVR — перезагрузка применяет изменения.
@@ -837,6 +865,8 @@ python -m sys_opt --inspect            # 显示硬件规格
 python -m sys_opt --optimize           # 优化系统（管理员 / sudo）
 python -m sys_opt --optimize --dry-run # 预览，不实际执行
 python -m sys_opt --optimize --profile gaming  # 游戏配置：FPS 优化（HAGS + Game DVR）
+python -m sys_opt --update            # 将 sys-opt 更新到最新版本
+python -m pip uninstall sys-opt       # 卸载 (Windows: py -m pip uninstall sys-opt)
 ```
 
 > 💡 Windows 优化器包含 **FPS** 调整：硬件加速 GPU 计划 (HAGS) 和禁用 Game DVR 后台录制 — 重启后生效。
@@ -855,6 +885,8 @@ python -m sys_opt --inspect            # ハードウェア情報を表示
 python -m sys_opt --optimize           # システムを最適化（管理者 / sudo）
 python -m sys_opt --optimize --dry-run # プレビュー（変更は適用しない）
 python -m sys_opt --optimize --profile gaming  # ゲーミング設定：FPS調整（HAGS + Game DVR）
+python -m sys_opt --update            # sys-opt を最新版に更新
+python -m pip uninstall sys-opt       # アンインストール (Windows: py -m pip uninstall sys-opt)
 ```
 
 > 💡 Windows オプティマイザーには **FPS** 調整が含まれます：ハードウェアアクセラレーション GPU スケジューリング (HAGS) と Game DVR のバックグラウンド録画の無効化 — 再起動で変更が適用されます。
@@ -875,6 +907,8 @@ python -m sys_opt --inspect            # اعرض مواصفات الجهاز
 python -m sys_opt --optimize           # حسّن النظام (مدير / sudo)
 python -m sys_opt --optimize --dry-run # معاينة دون تطبيق أي تغيير
 python -m sys_opt --optimize --profile gaming  # ملف الألعاب: تحسينات FPS (HAGS + Game DVR)
+python -m sys_opt --update            # حدّث sys-opt إلى أحدث إصدار
+python -m pip uninstall sys-opt       # ألغِ التثبيت (Windows: py -m pip uninstall sys-opt)
 ```
 
 > 💡 يتضمن مُحسِّن Windows تحسينات **FPS**: جدولة GPU المسرَّعة بالعتاد (HAGS) وتعطيل التسجيل الخلفي لـ Game DVR — أعد التشغيل لتطبيق التغييرات.
