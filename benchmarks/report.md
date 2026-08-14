@@ -4,18 +4,18 @@ Automated **CPU / RAM / disk** benchmarks (light stress via `psutil`) run every 
 **Linux, macOS and Windows** (GitHub-hosted runners). Each run is appended to
 `benchmarks/<os>.json`; this report shows the latest run per OS and the recent history.
 
-_Last update: 2026-08-13 04:48 UTC_
+_Last update: 2026-08-14 04:45 UTC_
 
 ## Latest run per OS
 
 | Metric | **macos-14** | **ubuntu-24.04** | **windows-2022** | Unit |
 |---|---|---|---|---|
-| CPU | 10.4 M ops/s | 12.4 M ops/s | 6.8 M ops/s |
-| RAM | 16892 MB/s | 24468 MB/s | 23355 MB/s |
-| Disk write | 1808 MB/s | 126 MB/s | 121 MB/s |
-| Disk read | 9410 MB/s | 12311 MB/s | 3044 MB/s |
-| Elapsed | 1.2 s | 1.4 s | 1.3 s |
-| **Overall verdict** | 🟢 Excellent | 🔴 Below average | 🔴 Below average |
+| CPU | 10.5 M ops/s | 7.3 M ops/s | 6.8 M ops/s |
+| RAM | 21391 MB/s | 19622 MB/s | 21747 MB/s |
+| Disk write | 1949 MB/s | 1893 MB/s | 138 MB/s |
+| Disk read | 1667 MB/s | 7792 MB/s | 3101 MB/s |
+| Elapsed | 1.2 s | 1.2 s | 1.3 s |
+| **Overall verdict** | 🟢 Excellent | 🟢 Good | 🔴 Below average |
 
 ## How to read these numbers
 
@@ -53,6 +53,7 @@ improvement.
 | 2026-08-11T04:15:56Z | 9.67  | 20327  | 2757  | 11453  | 1.2  |
 | 2026-08-12T04:44:48Z | 9.80  | 23396  | 1952  | 2031  | 1.2  |
 | 2026-08-13T04:48:23Z | 10.36  | 16892  | 1808  | 9410  | 1.2  |
+| 2026-08-14T04:45:21Z | 10.46  | 21391  | 1949  | 1667  | 1.2  |
 
 ### ubuntu-24.04
 
@@ -70,6 +71,7 @@ improvement.
 | 2026-08-11T04:15:56Z | 7.37  | 17329  | 1863  | 8004  | 1.2  |
 | 2026-08-12T04:44:48Z | 7.30  | 17610  | 2007  | 7987  | 1.2  |
 | 2026-08-13T04:48:23Z | 12.40  | 24468  | 126  | 12311  | 1.4  |
+| 2026-08-14T04:45:21Z | 7.33  | 19622  | 1893  | 7792  | 1.2  |
 
 ### windows-2022
 
@@ -87,4 +89,5 @@ improvement.
 | 2026-08-11T04:15:56Z | 6.84  | 19805  | 95  | 2900  | 1.4  |
 | 2026-08-12T04:44:48Z | 11.80  | 12511  | 65  | 1936  | 1.6  |
 | 2026-08-13T04:48:23Z | 6.83  | 23355  | 121  | 3044  | 1.3  |
+| 2026-08-14T04:45:21Z | 6.84  | 21747  | 138  | 3101  | 1.3  |
 
