@@ -188,5 +188,15 @@
     "disk_write_mbps": 1400.8,
     "disk_read_mbps": 2162.7,
     "elapsed_seconds": 1.2
+  },
+  {
+    "timestamp": "2026-08-21T03:46:21Z",
+    "run_id": "32444533613",
+    "os": "macos-14",
+    "cpu_mops": 10.24,
+    "ram_mbps": 21500.6,
+    "disk_write_mbps": 1281.8,
+    "disk_read_mbps": 2035.3,
+    "elapsed_seconds": 1.27
   }
 ]
