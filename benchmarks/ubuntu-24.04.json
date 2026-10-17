@@ -758,5 +758,15 @@
     "disk_write_mbps": 1665.0,
     "disk_read_mbps": 7671.5,
     "elapsed_seconds": 1.16
+  },
+  {
+    "timestamp": "2026-10-17T07:28:07Z",
+    "run_id": "39013704779",
+    "os": "ubuntu-24.04",
+    "cpu_mops": 7.06,
+    "ram_mbps": 21122.0,
+    "disk_write_mbps": 1464.7,
+    "disk_read_mbps": 6795.8,
+    "elapsed_seconds": 1.16
   }
 ]
