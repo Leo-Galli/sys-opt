@@ -4,18 +4,18 @@ Automated **CPU / RAM / disk** benchmarks (light stress via `psutil`) run every 
 **Linux, macOS and Windows** (GitHub-hosted runners). Each run is appended to
 `benchmarks/<os>.json`; this report shows the latest run per OS and the recent history.
 
-_Last update: 2026-10-19 08:25 UTC_
+_Last update: 2026-10-20 08:07 UTC_
 
 ## Latest run per OS
 
 | Metric | **macos-14** | **ubuntu-24.04** | **windows-2022** | Unit |
 |---|---|---|---|---|
-| CPU | 9.5 M ops/s | 7.0 M ops/s | 6.8 M ops/s |
-| RAM | 18787 MB/s | 24536 MB/s | 25434 MB/s |
-| Disk write | 1861 MB/s | 1314 MB/s | 96 MB/s |
-| Disk read | 995 MB/s | 7808 MB/s | 3120 MB/s |
-| Elapsed | 1.3 s | 1.1 s | 1.4 s |
-| **Overall verdict** | 🟢 Good | 🟢 Good | 🔴 Below average |
+| CPU | 9.9 M ops/s | 7.1 M ops/s | 7.2 M ops/s |
+| RAM | 18711 MB/s | 21586 MB/s | 21376 MB/s |
+| Disk write | 1962 MB/s | 1403 MB/s | 73 MB/s |
+| Disk read | 8308 MB/s | 6586 MB/s | 3089 MB/s |
+| Elapsed | 1.2 s | 1.2 s | 1.5 s |
+| **Overall verdict** | 🟢 Excellent | 🟢 Good | 🔴 Below average |
 
 ## How to read these numbers
 
@@ -41,7 +41,6 @@ improvement.
 
 | Date (UTC) | CPU (M ops/s) | RAM (MB/s) | Write (MB/s) | Read (MB/s) | Elapsed (s) |
 |---|---|---|---|---|---|
-| 2026-10-06T09:43:13Z | 9.10  | 13274  | 808  | 1421  | 1.2  |
 | 2026-10-07T09:41:30Z | 9.55  | 13777  | 739  | 4517  | 1.3  |
 | 2026-10-08T09:51:56Z | 9.88  | 18944  | 2222  | 9132  | 1.1  |
 | 2026-10-09T09:56:00Z | 9.53  | 16142  | 1326  | 6560  | 1.2  |
@@ -55,12 +54,12 @@ improvement.
 | 2026-10-17T07:28:07Z | 8.42  | 11657  | 1090  | 8386  | 1.2  |
 | 2026-10-18T07:43:09Z | 7.94  | 17780  | 815  | 4954  | 1.2  |
 | 2026-10-19T08:25:20Z | 9.53  | 18787  | 1861  | 995  | 1.3  |
+| 2026-10-20T08:07:53Z | 9.90  | 18711  | 1962  | 8308  | 1.2  |
 
 ### ubuntu-24.04
 
 | Date (UTC) | CPU (M ops/s) | RAM (MB/s) | Write (MB/s) | Read (MB/s) | Elapsed (s) |
 |---|---|---|---|---|---|
-| 2026-10-06T09:43:13Z | 6.99  | 24496  | 1544  | 7156  | 1.1  |
 | 2026-10-07T09:41:30Z | 8.89  | 19186  | 146  | 9781  | 1.3  |
 | 2026-10-08T09:51:56Z | 12.37  | 25084  | 185  | 11625  | 1.3  |
 | 2026-10-09T09:56:00Z | 6.93  | 22769  | 1489  | 7122  | 1.2  |
@@ -74,12 +73,12 @@ improvement.
 | 2026-10-17T07:28:07Z | 7.06  | 21122  | 1465  | 6796  | 1.2  |
 | 2026-10-18T07:43:09Z | 9.62  | 10792  | 153  | 5748  | 1.4  |
 | 2026-10-19T08:25:20Z | 7.01  | 24536  | 1314  | 7808  | 1.1  |
+| 2026-10-20T08:07:53Z | 7.08  | 21586  | 1403  | 6586  | 1.2  |
 
 ### windows-2022
 
 | Date (UTC) | CPU (M ops/s) | RAM (MB/s) | Write (MB/s) | Read (MB/s) | Elapsed (s) |
 |---|---|---|---|---|---|
-| 2026-10-06T09:43:13Z | 10.60  | 15206  | 55  | 1867  | 1.7  |
 | 2026-10-07T09:41:30Z | 7.20  | 22612  | 103  | 3095  | 1.4  |
 | 2026-10-08T09:51:56Z | 6.85  | 21123  | 102  | 1958  | 1.4  |
 | 2026-10-09T09:56:00Z | 8.06  | 24156  | 104  | 3505  | 1.4  |
@@ -93,4 +92,5 @@ improvement.
 | 2026-10-17T07:28:07Z | 9.09  | 10572  | 78  | 1718  | 1.5  |
 | 2026-10-18T07:43:09Z | 8.76  | 28144  | 164  | 3821  | 1.2  |
 | 2026-10-19T08:25:20Z | 6.84  | 25434  | 96  | 3120  | 1.4  |
+| 2026-10-20T08:07:53Z | 7.16  | 21376  | 73  | 3089  | 1.5  |
 
