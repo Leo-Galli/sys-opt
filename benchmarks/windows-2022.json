@@ -938,5 +938,15 @@
     "disk_write_mbps": 88.4,
     "disk_read_mbps": 2953.5,
     "elapsed_seconds": 1.41
+  },
+  {
+    "timestamp": "2026-11-04T10:21:24Z",
+    "run_id": "41813562420",
+    "os": "windows-2022",
+    "cpu_mops": 7.52,
+    "ram_mbps": 9764.9,
+    "disk_write_mbps": 104.3,
+    "disk_read_mbps": 1739.1,
+    "elapsed_seconds": 1.43
   }
 ]
